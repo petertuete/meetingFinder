@@ -334,6 +334,7 @@
       let isApplyingRemote = false;
       let lastCloudTimestamp = 0;
       let planId = "";
+      let editCode = "";
 
       const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
@@ -499,7 +500,13 @@
       }
 
       function createPlanId() {
-        const bytes = new Uint8Array(6);
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
+      }
+
+      function createEditCode() {
+        const bytes = new Uint8Array(8);
         crypto.getRandomValues(bytes);
         return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
       }
@@ -510,12 +517,13 @@
 
         if (!id) {
           id = createPlanId();
+          editCode = createEditCode();
           url.searchParams.set("plan", id);
           history.replaceState({}, "", url.toString());
         }
 
         planId = id;
-        planChip.textContent = `Plan: ${planId}`;
+        planChip.textContent = `Plan: ${planId.substring(0, 8)}...`;
       }
 
       async function copyPlanLink() {
@@ -693,7 +701,7 @@
         stats.textContent = "";
       }
 
-      function resetPlanning() {
+      async function resetPlanning() {
         const password = window.prompt("Passwort für Neu planen eingeben:", "");
 
         if (password === null) {
@@ -712,6 +720,18 @@
         clearResults("Alle Eingaben wurden gelöscht. Neue Planung gestartet.");
         addParticipant(false);
         saveState();
+
+        setSyncStatus("Neu planen in Cloud...");
+        const { error } = await supabase
+          .from(tableName)
+          .delete()
+          .eq("plan_id", planId);
+
+        if (error) {
+          setSyncStatus(`Fehler beim Neu planen: ${error.message}`);
+        } else {
+          setSyncStatus("Cloud geleert");
+        }
       }
 
       function availableForWindow(participant, dayIndex, startSlot, slotsNeeded) {
