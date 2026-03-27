@@ -336,7 +336,7 @@
       let planId = "";
       let editCode = "";
 
-      const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+      const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
       function buildStorageKey() {
         return `${storageKeyPrefix}:${planId}`;
@@ -431,7 +431,7 @@
       async function saveCloudState() {
         const nowIso = new Date().toISOString();
         const state = buildPayload();
-        const { data, error } = await supabase
+        const { data, error } = await sbClient
           .from(tableName)
           .upsert(
             {
@@ -457,7 +457,7 @@
 
       async function loadCloudState() {
         setSyncStatus("lade");
-        const { data, error } = await supabase
+        const { data, error } = await sbClient
           .from(tableName)
           .select("state, updated_at")
           .eq("plan_id", planId)
@@ -480,7 +480,7 @@
       }
 
       async function pollCloudState() {
-        const { data, error } = await supabase
+        const { data, error } = await sbClient
           .from(tableName)
           .select("state, updated_at")
           .eq("plan_id", planId)
@@ -722,7 +722,7 @@
         saveState();
 
         setSyncStatus("Neu planen in Cloud...");
-        const { error } = await supabase
+        const { error } = await sbClient
           .from(tableName)
           .delete()
           .eq("plan_id", planId);
