@@ -77,12 +77,12 @@
       }
 
       .card {
-        padding: 0.92rem;
+        padding: 1.1rem;
       }
 
       .card h2 {
-        margin: 0 0 0.8rem;
-        font-size: 1.15rem;
+        margin: 0 0 0.75rem;
+        font-size: 1.1rem;
       }
 
       .card p {
@@ -124,16 +124,22 @@
       }
 
       button,
-      select {
+      select,
+      input {
         font: inherit;
       }
 
       select,
-      button {
+      button,
+      input[type="text"] {
         border-radius: 10px;
         border: 1px solid #c7d4dd;
-        padding: 0.48rem 0.62rem;
+        padding: 0.5rem 0.62rem;
         background: #fff;
+      }
+
+      input[type="text"] {
+        width: 100%;
       }
 
       button {
@@ -141,6 +147,15 @@
       }
 
       .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+      }
+
+      .btn-primary-lg {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        font-weight: 700;
         background: var(--accent);
         color: #fff;
         border-color: transparent;
@@ -155,6 +170,12 @@
         background: #fde6e6;
         color: #7a1f1f;
         border-color: #f5c5c5;
+      }
+
+      .join-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
       }
 
       .week-board {
@@ -264,8 +285,16 @@
         font-style: italic;
       }
 
+      #back-home {
+        margin-bottom: 0.65rem;
+      }
+
       @media (max-width: 980px) {
         .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .home-grid {
           grid-template-columns: 1fr;
         }
 
@@ -278,56 +307,83 @@
   </head>
   <body>
     <main class="wrap">
-      <section class="hero">
-        <h1>Anonymer Meeting-Zeitfinder</h1>
-        <p class="subtitle">Jede Person markiert in der Wochenansicht direkt per Maus oder Finger ihre Verfügbarkeit.</p>
+      <section id="home-section" class="content-section active">
+        <section class="hero">
+          <h1>Meeting-Zeitfinder</h1>
+          <p class="subtitle">Neue Planung starten oder mit Plan-ID beitreten.</p>
+        </section>
+
+        <section class="home-grid">
+          <article class="card">
+            <h2>Neue Planung erstellen</h2>
+            <p>Es wird automatisch eine sichere Plan-ID erzeugt und in die URL geschrieben.</p>
+            <button id="create-plan" class="btn-primary-lg" type="button">Neue Planung starten</button>
+          </article>
+
+          <article class="card">
+            <h2>Bestehender Planung beitreten</h2>
+            <p>Plan-ID einfügen und direkt in die gemeinsame Wochenansicht springen.</p>
+            <div class="join-row">
+              <input id="join-plan-id" type="text" placeholder="Plan-ID" autocomplete="off" />
+              <button id="join-plan" class="btn-primary-lg" type="button">Plan beitreten</button>
+            </div>
+          </article>
+        </section>
       </section>
 
-      <section class="grid">
-        <article class="card">
-          <h2>Wochenansicht</h2>
-          <div class="toolbar">
-            <span id="participant-count" class="chip">Teilnehmer: 0</span>
-            <span id="plan-chip" class="chip">Plan: ...</span>
-            <label for="participant-select">Aktive Person:</label>
-            <select id="participant-select"></select>
-            <button id="add-participant" class="btn-primary" type="button">Nächste anonyme Person</button>
-            <button id="copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
-            <button id="clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
-            <button id="clear-all" class="btn-soft" type="button">Alles löschen</button>
-            <button id="reset-plan" class="btn-danger" type="button">Neu planen</button>
-          </div>
+      <section id="planner-section" class="content-section">
+        <button id="back-home" class="btn-soft" type="button">Zurück zur Startseite</button>
 
-          <div id="week-board" class="week-board"></div>
-          <p class="hint">Tippen oder klicken und ziehen: markiert Verfügbarkeit. Nochmals ziehen: entfernt Markierung.</p>
-          <p id="sync-status" class="hint">Cloud: wird vorbereitet...</p>
-        </article>
+        <section class="hero">
+          <h1>Anonymer Meeting-Zeitfinder</h1>
+          <p class="subtitle">Jede Person markiert in der Wochenansicht direkt per Maus oder Finger ihre Verfügbarkeit.</p>
+        </section>
 
-        <article class="card">
-          <h2>Beste Termine</h2>
-          <div class="toolbar">
-            <label for="duration">Dauer:</label>
-            <select id="duration">
-              <option value="30">30 min</option>
-              <option value="60" selected>60 min</option>
-              <option value="90">90 min</option>
-              <option value="120">120 min</option>
-            </select>
+        <section class="grid">
+          <article class="card planner-card">
+            <h2>Wochenansicht</h2>
+            <div class="toolbar">
+              <span id="participant-count" class="chip">Teilnehmer: 0</span>
+              <span id="plan-chip" class="chip">Plan: ...</span>
+              <label for="participant-select">Aktive Person:</label>
+              <select id="participant-select"></select>
+              <button id="add-participant" class="btn-primary" type="button">Nächste anonyme Person</button>
+              <button id="copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
+              <button id="clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
+              <button id="reset-plan" class="btn-danger" type="button">Neu planen</button>
+            </div>
 
-            <label for="top">Vorschläge:</label>
-            <select id="top">
-              <option value="3">Top 3</option>
-              <option value="5" selected>Top 5</option>
-              <option value="10">Top 10</option>
-            </select>
+            <div id="week-board" class="week-board"></div>
+            <p class="hint">Tippen oder klicken und ziehen: markiert Verfügbarkeit. Nochmals ziehen: entfernt Markierung.</p>
+            <p id="sync-status" class="hint">Cloud: wird vorbereitet...</p>
+          </article>
 
-            <button id="calc" class="btn-primary" type="button">Berechnen</button>
-          </div>
+          <article class="card planner-card">
+            <h2>Beste Termine</h2>
+            <div class="toolbar">
+              <label for="duration">Dauer:</label>
+              <select id="duration">
+                <option value="30">30 min</option>
+                <option value="60" selected>60 min</option>
+                <option value="90">90 min</option>
+                <option value="120">120 min</option>
+              </select>
 
-          <ul id="results" class="results-list"></ul>
-          <p id="results-empty" class="empty">Noch keine Berechnung gestartet.</p>
-          <p id="stats" class="stats"></p>
-        </article>
+              <label for="top">Vorschläge:</label>
+              <select id="top">
+                <option value="3">Top 3</option>
+                <option value="5" selected>Top 5</option>
+                <option value="10">Top 10</option>
+              </select>
+
+              <button id="calc" class="btn-primary" type="button">Berechnen</button>
+            </div>
+
+            <ul id="results" class="results-list"></ul>
+            <p id="results-empty" class="empty">Noch keine Berechnung gestartet.</p>
+            <p id="stats" class="stats"></p>
+          </article>
+        </section>
       </section>
     </main>
 
@@ -344,6 +400,13 @@
       const supabaseUrl = "https://zbqhnomzdaqfmauojrzx.supabase.co";
       const supabaseAnonKey = "sb_publishable_hjHji7zVw0V0ceMMqTJVDw_o-fK27Ol";
       const tableName = "meetings";
+
+      const homeSection = document.getElementById("home-section");
+      const plannerSection = document.getElementById("planner-section");
+      const createPlanBtn = document.getElementById("create-plan");
+      const joinPlanBtn = document.getElementById("join-plan");
+      const joinPlanInput = document.getElementById("join-plan-id");
+      const backHomeBtn = document.getElementById("back-home");
 
       const board = document.getElementById("week-board");
       const participantSelect = document.getElementById("participant-select");
@@ -365,8 +428,20 @@
       let lastCloudTimestamp = 0;
       let planId = "";
       let editCode = "";
+      let pollTimer = null;
+      let boardBuilt = false;
 
       const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+      function showHome() {
+        homeSection.classList.add("active");
+        plannerSection.classList.remove("active");
+      }
+
+      function showPlanner() {
+        homeSection.classList.remove("active");
+        plannerSection.classList.add("active");
+      }
 
       function buildStorageKey() {
         return `${storageKeyPrefix}:${planId}`;
@@ -541,19 +616,18 @@
         return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
       }
 
-      function ensurePlanId() {
-        const url = new URL(window.location.href);
-        let id = (url.searchParams.get("plan") || "").trim().toLowerCase();
-
-        if (!id) {
-          id = createPlanId();
-          editCode = createEditCode();
-          url.searchParams.set("plan", id);
-          history.replaceState({}, "", url.toString());
-        }
-
-        planId = id;
+      function setPlanId(id) {
+        planId = id.trim().toLowerCase();
         planChip.textContent = `Plan: ${planId.substring(0, 8)}...`;
+        const url = new URL(window.location.href);
+        url.searchParams.set("plan", planId);
+        history.replaceState({}, "", url.toString());
+      }
+
+      function createNewPlanId() {
+        const id = createPlanId();
+        editCode = createEditCode();
+        setPlanId(id);
       }
 
       async function copyPlanLink() {
@@ -610,6 +684,7 @@
       }
 
       function buildBoard() {
+        board.innerHTML = "";
         const header = document.createElement("div");
         header.className = "week-header";
 
@@ -649,6 +724,7 @@
         board.addEventListener("pointerdown", handlePointerDown);
         board.addEventListener("pointermove", handlePointerMove);
         window.addEventListener("pointerup", handlePointerUp);
+        boardBuilt = true;
       }
 
       function availabilityCount(dayIndex, slotIndex) {
@@ -752,10 +828,7 @@
         saveState();
 
         setSyncStatus("Neu planen in Cloud...");
-        const { error } = await sbClient
-          .from(tableName)
-          .delete()
-          .eq("plan_id", planId);
+        const { error } = await sbClient.from(tableName).delete().eq("plan_id", planId);
 
         if (error) {
           setSyncStatus(`Fehler beim Neu planen: ${error.message}`);
@@ -832,6 +905,43 @@
         stats.textContent = `${withEntries.length} aktive Personen, Dauer ${duration} Minuten, Raster 30 Minuten.`;
       }
 
+      function startPlannerSession(withNewPlan) {
+        participants.length = 0;
+        activeId = null;
+        renderParticipantSelect();
+
+        if (withNewPlan) {
+          createNewPlanId();
+        }
+
+        if (!boardBuilt) {
+          buildBoard();
+        }
+
+        showPlanner();
+        const restoredLocal = loadLocalState();
+        if (!restoredLocal || !participants.length) {
+          addParticipant(false);
+        }
+
+        renderParticipantSelect();
+        paintBoard();
+        clearResults(restoredLocal ? "Lokaler Stand geladen." : "Neuer lokaler Stand gestartet.");
+
+        loadCloudState().then((restoredCloud) => {
+          if (restoredCloud) {
+            clearResults("Cloud-Stand geladen.");
+          } else {
+            saveCloudState();
+          }
+        });
+
+        if (pollTimer) {
+          clearInterval(pollTimer);
+        }
+        pollTimer = setInterval(pollCloudState, pollIntervalMs);
+      }
+
       participantSelect.addEventListener("change", (event) => {
         activeId = event.target.value;
         paintBoard();
@@ -850,43 +960,50 @@
         saveState();
       });
 
-      document.getElementById("clear-all").addEventListener("click", () => {
-        participants.length = 0;
-        activeId = null;
-        renderParticipantSelect();
-        paintBoard();
-        clearResults("Alle anonymen Teilnehmer und Markierungen wurden gelöscht.");
-        saveState();
-      });
-
       durationSelect.addEventListener("change", saveState);
       topSelect.addEventListener("change", saveState);
-
       document.getElementById("reset-plan").addEventListener("click", resetPlanning);
-
       document.getElementById("calc").addEventListener("click", calculate);
 
-      buildBoard();
-      ensurePlanId();
-      const restoredLocal = loadLocalState();
+      createPlanBtn.addEventListener("click", () => {
+        startPlannerSession(true);
+      });
 
-      if (!restoredLocal || !participants.length) {
-        addParticipant(false);
-      }
+      joinPlanBtn.addEventListener("click", () => {
+        const id = joinPlanInput.value.trim().toLowerCase();
+        if (!id) {
+          alert("Bitte eine Plan-ID eingeben.");
+          return;
+        }
+        setPlanId(id);
+        startPlannerSession(false);
+      });
 
-      renderParticipantSelect();
-      paintBoard();
-      clearResults(restoredLocal ? "Lokaler Stand geladen." : "Neuer lokaler Stand gestartet.");
-
-      loadCloudState().then((restoredCloud) => {
-        if (restoredCloud) {
-          clearResults("Cloud-Stand geladen.");
-        } else {
-          saveCloudState();
+      joinPlanInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          joinPlanBtn.click();
         }
       });
 
-      setInterval(pollCloudState, pollIntervalMs);
+      backHomeBtn.addEventListener("click", () => {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        showHome();
+      });
+
+      (function bootstrapFromUrl() {
+        const url = new URL(window.location.href);
+        const id = (url.searchParams.get("plan") || "").trim().toLowerCase();
+
+        if (id) {
+          setPlanId(id);
+          startPlannerSession(false);
+        } else {
+          showHome();
+        }
+      })();
     </script>
   </body>
 </html>
