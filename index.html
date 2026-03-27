@@ -121,6 +121,12 @@
         color: #2a4255;
       }
 
+      .btn-danger {
+        background: #fde6e6;
+        color: #7a1f1f;
+        border-color: #f5c5c5;
+      }
+
       .week-board {
         overflow: auto;
         border: 1px solid #d8e2e9;
@@ -252,15 +258,19 @@
           <h2>Wochenansicht</h2>
           <div class="toolbar">
             <span id="participant-count" class="chip">Teilnehmer: 0</span>
+            <span id="plan-chip" class="chip">Plan: ...</span>
             <label for="participant-select">Aktive Person:</label>
             <select id="participant-select"></select>
             <button id="add-participant" class="btn-primary" type="button">Nächste anonyme Person</button>
+            <button id="copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
             <button id="clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
             <button id="clear-all" class="btn-soft" type="button">Alles löschen</button>
+            <button id="reset-plan" class="btn-danger" type="button">Neu planen</button>
           </div>
 
           <div id="week-board" class="week-board"></div>
           <p class="hint">Tippen oder klicken und ziehen: markiert Verfügbarkeit. Nochmals ziehen: entfernt Markierung.</p>
+          <p id="sync-status" class="hint">Cloud: wird vorbereitet...</p>
         </article>
 
         <article class="card">
@@ -291,16 +301,25 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       const dayLabels = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
       const slotStep = 30;
       const dayStart = 6 * 60;
       const dayEnd = 22 * 60;
       const slotsPerDay = (dayEnd - dayStart) / slotStep;
+      const storageKeyPrefix = "meetingFinderStateV2";
+      const saveDelayMs = 450;
+      const pollIntervalMs = 12000;
+      const supabaseUrl = "https://zbqhnomzdaqfmauojrzx.supabase.co";
+      const supabaseAnonKey = "sb_publishable_hjHji7zVw0V0ceMMqTJVDw_o-fK27Ol";
+      const tableName = "meetings";
 
       const board = document.getElementById("week-board");
       const participantSelect = document.getElementById("participant-select");
       const participantCount = document.getElementById("participant-count");
+      const planChip = document.getElementById("plan-chip");
+      const syncStatus = document.getElementById("sync-status");
       const durationSelect = document.getElementById("duration");
       const topSelect = document.getElementById("top");
       const resultsList = document.getElementById("results");
@@ -311,6 +330,203 @@
       let activeId = null;
       let isPainting = false;
       let paintMode = "add";
+      let saveTimer = null;
+      let isApplyingRemote = false;
+      let lastCloudTimestamp = 0;
+      let planId = "";
+
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+      function buildStorageKey() {
+        return `${storageKeyPrefix}:${planId}`;
+      }
+
+      function setSyncStatus(message) {
+        syncStatus.textContent = `Cloud: ${message}`;
+      }
+
+      function buildPayload() {
+        return {
+          participants: participants.map((p) => ({
+            id: p.id,
+            label: p.label,
+            slots: [...p.slots],
+          })),
+          activeId,
+          duration: durationSelect.value,
+          top: topSelect.value,
+        };
+      }
+
+      function applyPayload(payload) {
+        if (!payload || !Array.isArray(payload.participants)) {
+          return false;
+        }
+
+        isApplyingRemote = true;
+        participants.length = 0;
+
+        payload.participants.forEach((p, index) => {
+          participants.push({
+            id: p.id || `restored-${index}`,
+            label: p.label || `Person ${index + 1}`,
+            slots: new Set(Array.isArray(p.slots) ? p.slots : []),
+          });
+        });
+
+        activeId = payload.activeId;
+        if (!participants.some((p) => p.id === activeId)) {
+          activeId = participants[0] ? participants[0].id : null;
+        }
+
+        if (typeof payload.duration === "string") {
+          durationSelect.value = payload.duration;
+        }
+
+        if (typeof payload.top === "string") {
+          topSelect.value = payload.top;
+        }
+
+        renderParticipantSelect();
+        paintBoard();
+        saveLocalState();
+        isApplyingRemote = false;
+        return true;
+      }
+
+      function saveLocalState() {
+        localStorage.setItem(buildStorageKey(), JSON.stringify(buildPayload()));
+      }
+
+      function loadLocalState() {
+        const raw = localStorage.getItem(buildStorageKey());
+        if (!raw) return false;
+
+        try {
+          const data = JSON.parse(raw);
+          return applyPayload(data);
+        } catch {
+          return false;
+        }
+      }
+
+      function queueCloudSave() {
+        if (isApplyingRemote) return;
+
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+        }
+
+        saveTimer = setTimeout(() => {
+          saveCloudState();
+        }, saveDelayMs);
+      }
+
+      function saveState() {
+        saveLocalState();
+        queueCloudSave();
+      }
+
+      async function saveCloudState() {
+        const nowIso = new Date().toISOString();
+        const state = buildPayload();
+        const { data, error } = await supabase
+          .from(tableName)
+          .upsert(
+            {
+              plan_id: planId,
+              state,
+              updated_at: nowIso,
+            },
+            {
+              onConflict: "plan_id",
+            },
+          )
+          .select("updated_at")
+          .single();
+
+        if (error) {
+          setSyncStatus(`Speichern fehlgeschlagen (${error.message})`);
+          return;
+        }
+
+        lastCloudTimestamp = Date.parse(data.updated_at) || Date.now();
+        setSyncStatus("gespeichert");
+      }
+
+      async function loadCloudState() {
+        setSyncStatus("lade");
+        const { data, error } = await supabase
+          .from(tableName)
+          .select("state, updated_at")
+          .eq("plan_id", planId)
+          .maybeSingle();
+
+        if (error) {
+          setSyncStatus(`nicht verbunden (${error.message})`);
+          return false;
+        }
+
+        if (!data || !data.state) {
+          setSyncStatus("bereit (neuer Plan)");
+          return false;
+        }
+
+        const applied = applyPayload(data.state);
+        lastCloudTimestamp = Date.parse(data.updated_at) || Date.now();
+        setSyncStatus(applied ? "geladen" : "fehler beim Laden");
+        return applied;
+      }
+
+      async function pollCloudState() {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select("state, updated_at")
+          .eq("plan_id", planId)
+          .maybeSingle();
+
+        if (error || !data || !data.state) {
+          return;
+        }
+
+        const remoteTimestamp = Date.parse(data.updated_at) || 0;
+        if (remoteTimestamp > lastCloudTimestamp + 20) {
+          applyPayload(data.state);
+          lastCloudTimestamp = remoteTimestamp;
+          clearResults("Neuer Cloud-Stand von anderem Gerät geladen.");
+          setSyncStatus("synchronisiert");
+        }
+      }
+
+      function createPlanId() {
+        const bytes = new Uint8Array(6);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
+      }
+
+      function ensurePlanId() {
+        const url = new URL(window.location.href);
+        let id = (url.searchParams.get("plan") || "").trim().toLowerCase();
+
+        if (!id) {
+          id = createPlanId();
+          url.searchParams.set("plan", id);
+          history.replaceState({}, "", url.toString());
+        }
+
+        planId = id;
+        planChip.textContent = `Plan: ${planId}`;
+      }
+
+      async function copyPlanLink() {
+        const shareUrl = `${window.location.origin}${window.location.pathname}?plan=${encodeURIComponent(planId)}`;
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          setSyncStatus("Link kopiert");
+        } catch {
+          window.prompt("Link manuell kopieren:", shareUrl);
+        }
+      }
 
       function toClock(minutes) {
         const h = String(Math.floor(minutes / 60)).padStart(2, "0");
@@ -326,7 +542,7 @@
         return participants.find((p) => p.id === activeId) || null;
       }
 
-      function addParticipant() {
+      function addParticipant(shouldSave = true) {
         const id = crypto.randomUUID();
         const label = `Person ${participants.length + 1}`;
         participants.push({ id, label, slots: new Set() });
@@ -334,6 +550,9 @@
         renderParticipantSelect();
         paintBoard();
         clearResults("Neue Person angelegt. Verfügbarkeit direkt im Raster markieren.");
+        if (shouldSave) {
+          saveState();
+        }
       }
 
       function renderParticipantSelect() {
@@ -461,6 +680,9 @@
       }
 
       function handlePointerUp() {
+        if (isPainting) {
+          saveState();
+        }
         isPainting = false;
       }
 
@@ -469,6 +691,27 @@
         resultsEmpty.textContent = message || "Noch keine Berechnung gestartet.";
         resultsEmpty.style.display = "block";
         stats.textContent = "";
+      }
+
+      function resetPlanning() {
+        const password = window.prompt("Passwort für Neu planen eingeben:", "");
+
+        if (password === null) {
+          return;
+        }
+
+        if (password !== "deleteMe!") {
+          alert("Falsches Passwort. Neu planen wurde nicht ausgeführt.");
+          return;
+        }
+
+        participants.length = 0;
+        activeId = null;
+        renderParticipantSelect();
+        paintBoard();
+        clearResults("Alle Eingaben wurden gelöscht. Neue Planung gestartet.");
+        addParticipant(false);
+        saveState();
       }
 
       function availableForWindow(participant, dayIndex, startSlot, slotsNeeded) {
@@ -542,9 +785,11 @@
       participantSelect.addEventListener("change", (event) => {
         activeId = event.target.value;
         paintBoard();
+        saveState();
       });
 
       document.getElementById("add-participant").addEventListener("click", addParticipant);
+      document.getElementById("copy-link").addEventListener("click", copyPlanLink);
 
       document.getElementById("clear-current").addEventListener("click", () => {
         const active = getActive();
@@ -552,6 +797,7 @@
         active.slots.clear();
         paintBoard();
         clearResults("Markierungen der aktiven Person wurden entfernt.");
+        saveState();
       });
 
       document.getElementById("clear-all").addEventListener("click", () => {
@@ -560,12 +806,37 @@
         renderParticipantSelect();
         paintBoard();
         clearResults("Alle anonymen Teilnehmer und Markierungen wurden gelöscht.");
+        saveState();
       });
+
+      durationSelect.addEventListener("change", saveState);
+      topSelect.addEventListener("change", saveState);
+
+      document.getElementById("reset-plan").addEventListener("click", resetPlanning);
 
       document.getElementById("calc").addEventListener("click", calculate);
 
       buildBoard();
-      addParticipant();
+      ensurePlanId();
+      const restoredLocal = loadLocalState();
+
+      if (!restoredLocal || !participants.length) {
+        addParticipant(false);
+      }
+
+      renderParticipantSelect();
+      paintBoard();
+      clearResults(restoredLocal ? "Lokaler Stand geladen." : "Neuer lokaler Stand gestartet.");
+
+      loadCloudState().then((restoredCloud) => {
+        if (restoredCloud) {
+          clearResults("Cloud-Stand geladen.");
+        } else {
+          saveCloudState();
+        }
+      });
+
+      setInterval(pollCloudState, pollIntervalMs);
     </script>
   </body>
 </html>

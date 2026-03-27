@@ -11,6 +11,7 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
    - Erneut auf markierte Slots ziehen entfernt sie wieder.
 4. Dauer und Anzahl Vorschlaege waehlen.
 5. Auf Berechnen klicken.
+6. Mit Neu planen kann alles zurueckgesetzt werden (nur mit Passwort deleteMe!).
 
 ## Wie gerechnet wird
 
@@ -21,4 +22,7 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
 ## Hinweise
 
 - Alles ist anonym (Person 1, Person 2, ...).
-- Die Daten bleiben nur im Browser-Tab (kein Server, keine Cloud).
+- Daten werden lokal im Browser UND in Supabase Cloud gespeichert.
+- Plan-Links ermöglichen geräteübergreifende Synchronisation.
+- Alle Geräte mit demselben Plan-Link sehen die gleichen Markierungen (nach kurzer Verzögerung).
+- Neu planen loescht alle bisherigen Eingaben komplett und startet mit einer frischen Planung.
