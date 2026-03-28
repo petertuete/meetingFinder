@@ -285,6 +285,13 @@
         font-style: italic;
       }
 
+      .field-error {
+        color: #9b1c1c;
+        font-size: 0.85rem;
+        margin: 0.35rem 0 0;
+        min-height: 1.1rem;
+      }
+
       #back-home {
         margin-bottom: 0.65rem;
       }
@@ -316,8 +323,12 @@
         <section class="home-grid">
           <article class="card">
             <h2>Neue Planung erstellen</h2>
-            <p>Es wird automatisch eine sichere Plan-ID erzeugt und in die URL geschrieben.</p>
-            <button id="create-plan" class="btn-primary-lg" type="button">Neue Planung starten</button>
+            <p>Es wird automatisch eine sichere Plan-ID erzeugt. Das Lösch-Passwort wird nie im Klartext gespeichert.</p>
+            <div class="join-row">
+              <input id="create-plan-password" type="password" placeholder="Lösch-Passwort (mind. 6 Zeichen)" autocomplete="new-password" />
+              <p class="field-error" id="create-plan-error"></p>
+              <button id="create-plan" class="btn-primary-lg" type="button">Neue Planung starten</button>
+            </div>
           </article>
 
           <article class="card">
@@ -407,6 +418,8 @@
       const joinPlanBtn = document.getElementById("join-plan");
       const joinPlanInput = document.getElementById("join-plan-id");
       const backHomeBtn = document.getElementById("back-home");
+      const createPlanPasswordInput = document.getElementById("create-plan-password");
+      const createPlanError = document.getElementById("create-plan-error");
 
       const board = document.getElementById("week-board");
       const participantSelect = document.getElementById("participant-select");
@@ -610,10 +623,10 @@
         return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
       }
 
-      function createEditCode() {
-        const bytes = new Uint8Array(8);
-        crypto.getRandomValues(bytes);
-        return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
+      async function hashPassword(password) {
+        const encoded = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+        return Array.from(new Uint8Array(hashBuffer), (b) => b.toString(16).padStart(2, "0")).join("");
       }
 
       function setPlanId(id) {
@@ -624,9 +637,9 @@
         history.replaceState({}, "", url.toString());
       }
 
-      function createNewPlanId() {
+      async function initNewPlan(password) {
         const id = createPlanId();
-        editCode = createEditCode();
+        editCode = await hashPassword(password);
         setPlanId(id);
       }
 
@@ -808,14 +821,29 @@
       }
 
       async function resetPlanning() {
-        const password = window.prompt("Passwort für Neu planen eingeben:", "");
+        const input = window.prompt("Lösch-Passwort eingeben:", "");
 
-        if (password === null) {
+        if (input === null || !input) {
           return;
         }
 
-        if (password !== "deleteMe!") {
+        const inputHash = await hashPassword(input);
+        setSyncStatus("prüfe...");
+
+        const { data, error } = await sbClient.rpc("delete_plan", {
+          p_plan_id: planId,
+          p_edit_code: inputHash,
+        });
+
+        if (error) {
+          alert(`Fehler: ${error.message}`);
+          setSyncStatus("Fehler");
+          return;
+        }
+
+        if (!data) {
           alert("Falsches Passwort. Neu planen wurde nicht ausgeführt.");
+          setSyncStatus("bereit");
           return;
         }
 
@@ -825,16 +853,8 @@
         paintBoard();
         clearResults("Alle Eingaben wurden gelöscht. Neue Planung gestartet.");
         addParticipant(false);
-        saveState();
-
-        setSyncStatus("Neu planen in Cloud...");
-        const { error } = await sbClient.from(tableName).delete().eq("plan_id", planId);
-
-        if (error) {
-          setSyncStatus(`Fehler beim Neu planen: ${error.message}`);
-        } else {
-          setSyncStatus("Cloud geleert");
-        }
+        saveLocalState();
+        setSyncStatus("Cloud geleert");
       }
 
       function availableForWindow(participant, dayIndex, startSlot, slotsNeeded) {
@@ -905,13 +925,13 @@
         stats.textContent = `${withEntries.length} aktive Personen, Dauer ${duration} Minuten, Raster 30 Minuten.`;
       }
 
-      function startPlannerSession(withNewPlan) {
+      async function startPlannerSession(withNewPlan, password = null) {
         participants.length = 0;
         activeId = null;
         renderParticipantSelect();
 
         if (withNewPlan) {
-          createNewPlanId();
+          await initNewPlan(password);
         }
 
         if (!boardBuilt) {
@@ -965,8 +985,16 @@
       document.getElementById("reset-plan").addEventListener("click", resetPlanning);
       document.getElementById("calc").addEventListener("click", calculate);
 
-      createPlanBtn.addEventListener("click", () => {
-        startPlannerSession(true);
+      createPlanBtn.addEventListener("click", async () => {
+        const password = createPlanPasswordInput.value.trim();
+        if (password.length < 6) {
+          createPlanError.textContent = "Bitte mindestens 6 Zeichen eingeben.";
+          createPlanPasswordInput.focus();
+          return;
+        }
+        createPlanError.textContent = "";
+        await startPlannerSession(true, password);
+        createPlanPasswordInput.value = "";
       });
 
       joinPlanBtn.addEventListener("click", () => {

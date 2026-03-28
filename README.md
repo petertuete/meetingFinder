@@ -11,7 +11,7 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
    - Erneut auf markierte Slots ziehen entfernt sie wieder.
 4. Dauer und Anzahl Vorschlaege waehlen.
 5. Auf Berechnen klicken.
-6. Mit Neu planen kann alles zurueckgesetzt werden (nur mit Passwort deleteMe!).
+6. Mit Neu planen kann alles zurueckgesetzt werden (nur mit dem Passwort, das beim Erstellen der Planung vergeben wurde).
 
 ## Wie gerechnet wird
 
