@@ -549,14 +549,20 @@
       async function saveCloudState() {
         const nowIso = new Date().toISOString();
         const state = buildPayload();
+        const row = {
+          plan_id: planId,
+          state,
+          updated_at: nowIso,
+        };
+
+        if (editCode) {
+          row.edit_code = editCode;
+        }
+
         const { data, error } = await sbClient
           .from(tableName)
           .upsert(
-            {
-              plan_id: planId,
-              state,
-              updated_at: nowIso,
-            },
+            row,
             {
               onConflict: "plan_id",
             },
