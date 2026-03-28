@@ -560,6 +560,8 @@
       let swipeStartX = 0;
       let swipeStartY = 0;
       let swipeTracking = false;
+      let swipeDidChangeDay = false;
+      let pendingTouchPaint = null;
 
       const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
@@ -1002,18 +1004,24 @@
           swipeStartX = event.clientX;
           swipeStartY = event.clientY;
           swipeTracking = true;
+          swipeDidChangeDay = false;
         }
 
         if (!isCellElement(event.target)) return;
         if (!getActive()) return;
 
-        event.preventDefault();
         const dayIndex = Number(event.target.dataset.day);
         const slotIndex = Number(event.target.dataset.slot);
         const active = getActive();
         const key = keyFor(dayIndex, slotIndex);
-
         paintMode = active.slots.has(key) ? "remove" : "add";
+
+        if (isMobileLayout() && event.pointerType === "touch") {
+          pendingTouchPaint = { dayIndex, slotIndex, paintMode };
+          return;
+        }
+
+        event.preventDefault();
         isPainting = true;
         swipeTracking = false;
         setCell(dayIndex, slotIndex);
@@ -1022,6 +1030,26 @@
       }
 
       function handlePointerMove(event) {
+        if (isMobileLayout() && event.pointerType === "touch" && swipeTracking) {
+          const deltaX = event.clientX - swipeStartX;
+          const deltaY = event.clientY - swipeStartY;
+
+          if (!isPainting && Math.abs(deltaX) > 28 && Math.abs(deltaX) > Math.abs(deltaY) + 8) {
+            shiftMobileDay(deltaX < 0 ? 1 : -1);
+            swipeDidChangeDay = true;
+            swipeTracking = false;
+            pendingTouchPaint = null;
+            return;
+          }
+
+          if (!isPainting && pendingTouchPaint && Math.abs(deltaY) > 10 && Math.abs(deltaY) >= Math.abs(deltaX)) {
+            paintMode = pendingTouchPaint.paintMode;
+            isPainting = true;
+            setCell(pendingTouchPaint.dayIndex, pendingTouchPaint.slotIndex);
+            pendingTouchPaint = null;
+          }
+        }
+
         if (!isPainting) return;
         const elem = document.elementFromPoint(event.clientX, event.clientY);
         if (!isCellElement(elem)) return;
@@ -1036,9 +1064,19 @@
         if (!isPainting && swipeTracking && isMobileLayout() && event.pointerType === "touch") {
           const deltaX = event.clientX - swipeStartX;
           const deltaY = event.clientY - swipeStartY;
-          if (Math.abs(deltaX) > 52 && Math.abs(deltaX) > Math.abs(deltaY) + 12) {
+          if (!swipeDidChangeDay && Math.abs(deltaX) > 52 && Math.abs(deltaX) > Math.abs(deltaY) + 12) {
             shiftMobileDay(deltaX < 0 ? 1 : -1);
+            swipeDidChangeDay = true;
           }
+        }
+
+        if (!isPainting && pendingTouchPaint && !swipeDidChangeDay) {
+          paintMode = pendingTouchPaint.paintMode;
+          setCell(pendingTouchPaint.dayIndex, pendingTouchPaint.slotIndex);
+          paintBoard();
+          clearResults("Verfügbarkeit geändert. Für neue Vorschläge bitte berechnen.");
+          saveState();
+          pendingTouchPaint = null;
         }
 
         if (isPainting) {
@@ -1046,6 +1084,8 @@
         }
         isPainting = false;
         swipeTracking = false;
+        swipeDidChangeDay = false;
+        pendingTouchPaint = null;
       }
 
       function clearResults(message) {
