@@ -131,7 +131,8 @@
 
       select,
       button,
-      input[type="text"] {
+      input[type="text"],
+      input[type="password"] {
         border-radius: 10px;
         border: 1px solid #c7d4dd;
         padding: 0.5rem 0.62rem;
@@ -281,6 +282,16 @@
         font-size: 0.89rem;
       }
 
+      .security-note {
+        margin-top: 0.8rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid #ead9b2;
+        border-radius: 12px;
+        background: #fff6df;
+        color: #5a4a1f;
+        font-size: 0.9rem;
+      }
+
       .empty {
         font-style: italic;
       }
@@ -323,21 +334,26 @@
         <section class="home-grid">
           <article class="card">
             <h2>Neue Planung erstellen</h2>
-            <p>Es wird automatisch eine sichere Plan-ID erzeugt. Das Lösch-Passwort wird nie im Klartext gespeichert.</p>
+            <p>Lege ein Zugriffs-Kennwort und ein Lösch-Kennwort fest. Beide werden nur serverseitig verifiziert.</p>
             <div class="join-row">
-              <input id="create-plan-password" type="password" placeholder="Lösch-Passwort (mind. 6 Zeichen)" autocomplete="new-password" />
+              <input id="create-access-password" type="password" placeholder="Zugriffs-Kennwort (mind. 8 Zeichen)" autocomplete="new-password" />
+              <input id="create-delete-password" type="password" placeholder="Lösch-Kennwort (mind. 8 Zeichen)" autocomplete="new-password" />
               <p class="field-error" id="create-plan-error"></p>
               <button id="create-plan" class="btn-primary-lg" type="button">Neue Planung starten</button>
             </div>
+            <p class="security-note">Zugriffsdaten werden nur bis zum Schließen dieses Browser-Tabs gespeichert. Nach der Nutzung den Tab schließen.</p>
           </article>
 
           <article class="card">
             <h2>Bestehender Planung beitreten</h2>
-            <p>Plan-ID einfügen und direkt in die gemeinsame Wochenansicht springen.</p>
+            <p>Plan-ID und Zugriffs-Kennwort eingeben.</p>
             <div class="join-row">
               <input id="join-plan-id" type="text" placeholder="Plan-ID" autocomplete="off" />
+              <input id="join-access-password" type="password" placeholder="Zugriffs-Kennwort" autocomplete="current-password" />
+              <p class="field-error" id="join-plan-error"></p>
               <button id="join-plan" class="btn-primary-lg" type="button">Plan beitreten</button>
             </div>
+            <p class="security-note">Wenn die Planung beendet ist, den Browser-Tab schließen, damit das Zugriffs-Kennwort aus der Sitzung verschwindet.</p>
           </article>
         </section>
       </section>
@@ -361,7 +377,7 @@
               <button id="add-participant" class="btn-primary" type="button">Nächste anonyme Person</button>
               <button id="copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
               <button id="clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
-              <button id="reset-plan" class="btn-danger" type="button">Neu planen</button>
+              <button id="reset-plan" class="btn-danger" type="button">Plan löschen</button>
             </div>
 
             <div id="week-board" class="week-board"></div>
@@ -406,19 +422,22 @@
       const dayEnd = 22 * 60;
       const slotsPerDay = (dayEnd - dayStart) / slotStep;
       const storageKeyPrefix = "meetingFinderStateV2";
+      const credentialsKeyPrefix = "meetingFinderCredsV1";
       const saveDelayMs = 450;
       const pollIntervalMs = 12000;
       const supabaseUrl = "https://zbqhnomzdaqfmauojrzx.supabase.co";
       const supabaseAnonKey = "sb_publishable_hjHji7zVw0V0ceMMqTJVDw_o-fK27Ol";
-      const tableName = "meetings";
 
       const homeSection = document.getElementById("home-section");
       const plannerSection = document.getElementById("planner-section");
       const createPlanBtn = document.getElementById("create-plan");
       const joinPlanBtn = document.getElementById("join-plan");
       const joinPlanInput = document.getElementById("join-plan-id");
+      const joinAccessPasswordInput = document.getElementById("join-access-password");
+      const joinPlanError = document.getElementById("join-plan-error");
       const backHomeBtn = document.getElementById("back-home");
-      const createPlanPasswordInput = document.getElementById("create-plan-password");
+      const createAccessPasswordInput = document.getElementById("create-access-password");
+      const createDeletePasswordInput = document.getElementById("create-delete-password");
       const createPlanError = document.getElementById("create-plan-error");
 
       const board = document.getElementById("week-board");
@@ -440,7 +459,8 @@
       let isApplyingRemote = false;
       let lastCloudTimestamp = 0;
       let planId = "";
-      let editCode = "";
+      let accessCode = "";
+      let deleteCode = "";
       let pollTimer = null;
       let boardBuilt = false;
 
@@ -460,24 +480,61 @@
         return `${storageKeyPrefix}:${planId}`;
       }
 
+      function buildCredentialsKey(id) {
+        return `${credentialsKeyPrefix}:${id}`;
+      }
+
       function setSyncStatus(message) {
         syncStatus.textContent = `Cloud: ${message}`;
       }
 
-      function buildPayload() {
+      function setPlanId(id) {
+        planId = id.trim().toLowerCase();
+        planChip.textContent = `Plan: ${planId.substring(0, 8)}...`;
+        const url = new URL(window.location.href);
+        url.searchParams.set("plan", planId);
+        history.replaceState({}, "", url.toString());
+      }
+
+      function saveCredentials(id, access) {
+        sessionStorage.setItem(
+          buildCredentialsKey(id),
+          JSON.stringify({
+            accessCode: access || "",
+          }),
+        );
+      }
+
+      function loadCredentials(id) {
+        const raw = sessionStorage.getItem(buildCredentialsKey(id));
+        if (!raw) return null;
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      }
+
+      function clearCredentials(id) {
+        sessionStorage.removeItem(buildCredentialsKey(id));
+      }
+
+      function buildPayload(includeActiveSelection = true) {
         return {
           participants: participants.map((p) => ({
             id: p.id,
             label: p.label,
             slots: [...p.slots],
           })),
-          activeId,
+          activeId: includeActiveSelection ? activeId : null,
           duration: durationSelect.value,
           top: topSelect.value,
         };
       }
 
-      function applyPayload(payload) {
+      function applyPayload(payload, options = {}) {
+        const { restoreActiveSelection = true } = options;
+
         if (!payload || !Array.isArray(payload.participants)) {
           return false;
         }
@@ -493,10 +550,8 @@
           });
         });
 
-        activeId = payload.activeId;
-        if (!participants.some((p) => p.id === activeId)) {
-          activeId = participants[0] ? participants[0].id : null;
-        }
+        const requestedActiveId = restoreActiveSelection ? payload.activeId : activeId;
+        activeId = participants.some((p) => p.id === requestedActiveId) ? requestedActiveId : null;
 
         if (typeof payload.duration === "string") {
           durationSelect.value = payload.duration;
@@ -514,11 +569,15 @@
       }
 
       function saveLocalState() {
-        localStorage.setItem(buildStorageKey(), JSON.stringify(buildPayload()));
+        sessionStorage.setItem(buildStorageKey(), JSON.stringify(buildPayload()));
+      }
+
+      function clearLocalState() {
+        sessionStorage.removeItem(buildStorageKey());
       }
 
       function loadLocalState() {
-        const raw = localStorage.getItem(buildStorageKey());
+        const raw = sessionStorage.getItem(buildStorageKey());
         if (!raw) return false;
 
         try {
@@ -530,7 +589,7 @@
       }
 
       function queueCloudSave() {
-        if (isApplyingRemote) return;
+        if (isApplyingRemote || !accessCode) return;
 
         if (saveTimer) {
           clearTimeout(saveTimer);
@@ -546,114 +605,109 @@
         queueCloudSave();
       }
 
-      async function saveCloudState() {
-        const nowIso = new Date().toISOString();
-        const state = buildPayload();
-        const row = {
-          plan_id: planId,
-          state,
-          updated_at: nowIso,
-        };
+      function rpcRow(data) {
+        if (Array.isArray(data)) {
+          return data[0] || null;
+        }
+        return data || null;
+      }
 
-        if (editCode) {
-          row.edit_code = editCode;
+      async function createPlanRemote(access, del) {
+        const { data, error } = await sbClient.rpc("create_plan", {
+          p_state: buildPayload(false),
+          p_access_code: access,
+          p_delete_code: del,
+        });
+
+        if (error) {
+          throw new Error(error.message);
         }
 
-        const { data, error } = await sbClient
-          .from(tableName)
-          .upsert(
-            row,
-            {
-              onConflict: "plan_id",
-            },
-          )
-          .select("updated_at")
-          .single();
+        const row = rpcRow(data);
+        if (!row || !row.plan_id) {
+          throw new Error("create_plan lieferte keine Plan-ID.");
+        }
+
+        return row;
+      }
+
+      async function saveCloudState() {
+        if (!planId || !accessCode) return;
+
+        const state = buildPayload(false);
+        const { data, error } = await sbClient.rpc("save_plan", {
+          p_plan_id: planId,
+          p_access_code: accessCode,
+          p_state: state,
+        });
 
         if (error) {
           setSyncStatus(`Speichern fehlgeschlagen (${error.message})`);
           return;
         }
 
-        lastCloudTimestamp = Date.parse(data.updated_at) || Date.now();
+        const ts = typeof data === "string" ? data : rpcRow(data)?.updated_at;
+        lastCloudTimestamp = Date.parse(ts || "") || Date.now();
         setSyncStatus("gespeichert");
       }
 
       async function loadCloudState() {
+        if (!planId || !accessCode) return false;
+
         setSyncStatus("lade");
-        const { data, error } = await sbClient
-          .from(tableName)
-          .select("state, updated_at")
-          .eq("plan_id", planId)
-          .maybeSingle();
+        const { data, error } = await sbClient.rpc("get_plan", {
+          p_plan_id: planId,
+          p_access_code: accessCode,
+        });
 
         if (error) {
           setSyncStatus(`nicht verbunden (${error.message})`);
           return false;
         }
 
-        if (!data || !data.state) {
-          setSyncStatus("bereit (neuer Plan)");
+        const row = rpcRow(data);
+        if (!row || !row.state) {
+          setSyncStatus("kein Zugriff oder Plan nicht gefunden");
           return false;
         }
 
-        const applied = applyPayload(data.state);
-        lastCloudTimestamp = Date.parse(data.updated_at) || Date.now();
+        const applied = applyPayload(row.state, { restoreActiveSelection: false });
+        lastCloudTimestamp = Date.parse(row.updated_at || "") || Date.now();
         setSyncStatus(applied ? "geladen" : "fehler beim Laden");
         return applied;
       }
 
       async function pollCloudState() {
-        const { data, error } = await sbClient
-          .from(tableName)
-          .select("state, updated_at")
-          .eq("plan_id", planId)
-          .maybeSingle();
+        if (!planId || !accessCode) return;
 
-        if (error || !data || !data.state) {
+        const { data, error } = await sbClient.rpc("get_plan", {
+          p_plan_id: planId,
+          p_access_code: accessCode,
+        });
+
+        if (error) {
           return;
         }
 
-        const remoteTimestamp = Date.parse(data.updated_at) || 0;
+        const row = rpcRow(data);
+        if (!row || !row.state) {
+          return;
+        }
+
+        const remoteTimestamp = Date.parse(row.updated_at || "") || 0;
         if (remoteTimestamp > lastCloudTimestamp + 20) {
-          applyPayload(data.state);
+          applyPayload(row.state, { restoreActiveSelection: false });
           lastCloudTimestamp = remoteTimestamp;
           clearResults("Neuer Cloud-Stand von anderem Gerät geladen.");
           setSyncStatus("synchronisiert");
         }
       }
 
-      function createPlanId() {
-        const bytes = new Uint8Array(16);
-        crypto.getRandomValues(bytes);
-        return Array.from(bytes, (n) => n.toString(16).padStart(2, "0")).join("");
-      }
-
-      async function hashPassword(password) {
-        const encoded = new TextEncoder().encode(password);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-        return Array.from(new Uint8Array(hashBuffer), (b) => b.toString(16).padStart(2, "0")).join("");
-      }
-
-      function setPlanId(id) {
-        planId = id.trim().toLowerCase();
-        planChip.textContent = `Plan: ${planId.substring(0, 8)}...`;
-        const url = new URL(window.location.href);
-        url.searchParams.set("plan", planId);
-        history.replaceState({}, "", url.toString());
-      }
-
-      async function initNewPlan(password) {
-        const id = createPlanId();
-        editCode = await hashPassword(password);
-        setPlanId(id);
-      }
-
       async function copyPlanLink() {
         const shareUrl = `${window.location.origin}${window.location.pathname}?plan=${encodeURIComponent(planId)}`;
         try {
           await navigator.clipboard.writeText(shareUrl);
-          setSyncStatus("Link kopiert");
+          setSyncStatus("Link kopiert (Zugriffs-Kennwort separat teilen)");
         } catch {
           window.prompt("Link manuell kopieren:", shareUrl);
         }
@@ -688,6 +742,14 @@
 
       function renderParticipantSelect() {
         participantSelect.innerHTML = "";
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = activeId
+          ? "Aktive Person wählen"
+          : "Zuerst 'Nächste anonyme Person' klicken";
+        participantSelect.appendChild(placeholder);
+
         participants.forEach((p) => {
           const option = document.createElement("option");
           option.value = p.id;
@@ -697,8 +759,11 @@
 
         if (activeId) {
           participantSelect.value = activeId;
+        } else {
+          participantSelect.value = "";
         }
 
+        participantSelect.disabled = !activeId;
         participantCount.textContent = `Teilnehmer: ${participants.length}`;
       }
 
@@ -827,18 +892,16 @@
       }
 
       async function resetPlanning() {
-        const input = window.prompt("Lösch-Passwort eingeben:", "");
+        const input = window.prompt("Lösch-Kennwort eingeben:", "");
 
         if (input === null || !input) {
           return;
         }
 
-        const inputHash = await hashPassword(input);
         setSyncStatus("prüfe...");
-
-        const { data, error } = await sbClient.rpc("delete_plan", {
+        const { data, error } = await sbClient.rpc("delete_plan_secure", {
           p_plan_id: planId,
-          p_edit_code: inputHash,
+          p_delete_code: input,
         });
 
         if (error) {
@@ -847,20 +910,27 @@
           return;
         }
 
-        if (!data) {
-          alert("Falsches Passwort. Neu planen wurde nicht ausgeführt.");
+        const ok = !!(Array.isArray(data) ? data[0] : data);
+        if (!ok) {
+          alert("Falsches Kennwort. Plan löschen wurde nicht ausgeführt.");
           setSyncStatus("bereit");
           return;
         }
 
+        clearLocalState();
+        clearCredentials(planId);
+        accessCode = "";
+        deleteCode = "";
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
         participants.length = 0;
         activeId = null;
         renderParticipantSelect();
         paintBoard();
-        clearResults("Alle Eingaben wurden gelöscht. Neue Planung gestartet.");
-        addParticipant(false);
-        saveLocalState();
-        setSyncStatus("Cloud geleert");
+        clearResults("Plan wurde in der Cloud gelöscht.");
+        showHome();
       }
 
       function availableForWindow(participant, dayIndex, startSlot, slotsNeeded) {
@@ -931,36 +1001,61 @@
         stats.textContent = `${withEntries.length} aktive Personen, Dauer ${duration} Minuten, Raster 30 Minuten.`;
       }
 
-      async function startPlannerSession(withNewPlan, password = null) {
+      async function startPlannerSession(options) {
+        const { mode, requestedPlanId = "", requestedAccessCode = "", requestedDeleteCode = "" } = options;
+
         participants.length = 0;
         activeId = null;
         renderParticipantSelect();
-
-        if (withNewPlan) {
-          await initNewPlan(password);
-        }
 
         if (!boardBuilt) {
           buildBoard();
         }
 
+        if (mode === "create") {
+          setSyncStatus("erstelle Plan...");
+          const created = await createPlanRemote(requestedAccessCode, requestedDeleteCode);
+          setPlanId(created.plan_id);
+          accessCode = requestedAccessCode;
+          deleteCode = requestedDeleteCode;
+          saveCredentials(planId, accessCode);
+          clearLocalState();
+          lastCloudTimestamp = Date.parse(created.updated_at || "") || Date.now();
+        } else {
+          setPlanId(requestedPlanId);
+          accessCode = requestedAccessCode;
+          deleteCode = "";
+        }
+
         showPlanner();
+
         const restoredLocal = loadLocalState();
-        if (!restoredLocal || !participants.length) {
-          addParticipant(false);
+
+        const restoredCloud = await loadCloudState();
+        if (!restoredCloud && mode === "join") {
+          clearCredentials(planId);
+          accessCode = "";
+          joinAccessPasswordInput.value = "";
+          alert("Plan nicht gefunden oder Zugriffs-Kennwort falsch.");
+          showHome();
+          return;
+        }
+
+        if (mode === "join") {
+          saveCredentials(planId, accessCode);
         }
 
         renderParticipantSelect();
         paintBoard();
-        clearResults(restoredLocal ? "Lokaler Stand geladen." : "Neuer lokaler Stand gestartet.");
+        clearResults(
+          restoredCloud || restoredLocal
+            ? "Plan geladen. Bitte zuerst 'Nächste anonyme Person' klicken."
+            : "Plan bereit. Bitte zuerst 'Nächste anonyme Person' klicken.",
+        );
 
-        loadCloudState().then((restoredCloud) => {
-          if (restoredCloud) {
-            clearResults("Cloud-Stand geladen.");
-          } else {
-            saveCloudState();
-          }
-        });
+        if (!restoredCloud) {
+          saveCloudState();
+        }
 
         if (pollTimer) {
           clearInterval(pollTimer);
@@ -969,6 +1064,11 @@
       }
 
       participantSelect.addEventListener("change", (event) => {
+        if (!event.target.value) {
+          activeId = null;
+          paintBoard();
+          return;
+        }
         activeId = event.target.value;
         paintBoard();
         saveState();
@@ -992,28 +1092,66 @@
       document.getElementById("calc").addEventListener("click", calculate);
 
       createPlanBtn.addEventListener("click", async () => {
-        const password = createPlanPasswordInput.value.trim();
-        if (password.length < 6) {
-          createPlanError.textContent = "Bitte mindestens 6 Zeichen eingeben.";
-          createPlanPasswordInput.focus();
+        const access = createAccessPasswordInput.value.trim();
+        const del = createDeletePasswordInput.value.trim();
+
+        if (access.length < 8) {
+          createPlanError.textContent = "Zugriffs-Kennwort muss mindestens 8 Zeichen haben.";
+          createAccessPasswordInput.focus();
           return;
         }
+
+        if (del.length < 8) {
+          createPlanError.textContent = "Lösch-Kennwort muss mindestens 8 Zeichen haben.";
+          createDeletePasswordInput.focus();
+          return;
+        }
+
         createPlanError.textContent = "";
-        await startPlannerSession(true, password);
-        createPlanPasswordInput.value = "";
+        try {
+          await startPlannerSession({
+            mode: "create",
+            requestedAccessCode: access,
+            requestedDeleteCode: del,
+          });
+          createAccessPasswordInput.value = "";
+          createDeletePasswordInput.value = "";
+        } catch (err) {
+          createPlanError.textContent = `Fehler beim Erstellen: ${err.message}`;
+        }
       });
 
-      joinPlanBtn.addEventListener("click", () => {
+      joinPlanBtn.addEventListener("click", async () => {
         const id = joinPlanInput.value.trim().toLowerCase();
+        const access = joinAccessPasswordInput.value.trim();
+
         if (!id) {
-          alert("Bitte eine Plan-ID eingeben.");
+          joinPlanError.textContent = "Bitte eine Plan-ID eingeben.";
+          joinPlanInput.focus();
           return;
         }
-        setPlanId(id);
-        startPlannerSession(false);
+
+        if (access.length < 8) {
+          joinPlanError.textContent = "Bitte ein gültiges Zugriffs-Kennwort eingeben.";
+          joinAccessPasswordInput.focus();
+          return;
+        }
+
+        joinPlanError.textContent = "";
+        await startPlannerSession({
+          mode: "join",
+          requestedPlanId: id,
+          requestedAccessCode: access,
+        });
       });
 
       joinPlanInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          joinPlanBtn.click();
+        }
+      });
+
+      joinAccessPasswordInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           joinPlanBtn.click();
         }
@@ -1031,9 +1169,20 @@
         const url = new URL(window.location.href);
         const id = (url.searchParams.get("plan") || "").trim().toLowerCase();
 
-        if (id) {
-          setPlanId(id);
-          startPlannerSession(false);
+        if (!id) {
+          showHome();
+          return;
+        }
+
+        joinPlanInput.value = id;
+        const creds = loadCredentials(id);
+        if (creds?.accessCode) {
+          joinAccessPasswordInput.value = creds.accessCode;
+          startPlannerSession({
+            mode: "join",
+            requestedPlanId: id,
+            requestedAccessCode: creds.accessCode,
+          });
         } else {
           showHome();
         }

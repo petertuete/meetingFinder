@@ -5,13 +5,20 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
 ## Start
 
 1. Datei index.html im Browser oeffnen.
-2. Fuer jede Person auf Nächste anonyme Person klicken.
-3. In der Wochenansicht per Maus oder Finger markieren:
+2. Neue Planung erstellen:
+   - Zugriffs-Kennwort vergeben (wird zum Laden und Speichern benoetigt).
+   - Loesch-Kennwort vergeben (nur fuer Neu planen / Loeschen).
+   - Zugriffs-Kennwort und lokaler Zwischenstand werden nur fuer den aktuellen Browser-Tab gespeichert.
+3. Bestehender Planung beitreten:
+   - Plan-ID und Zugriffs-Kennwort eingeben.
+   - Nach der Nutzung den Browser-Tab schliessen, damit Kennwort und lokaler Zwischenstand aus der Sitzung entfernt werden.
+4. Fuer jede Person auf Naechste anonyme Person klicken.
+5. In der Wochenansicht per Maus oder Finger markieren:
    - Klicken/ziehen markiert Slots als verfuegbar.
    - Erneut auf markierte Slots ziehen entfernt sie wieder.
-4. Dauer und Anzahl Vorschlaege waehlen.
-5. Auf Berechnen klicken.
-6. Mit Neu planen kann alles zurueckgesetzt werden (nur mit dem Passwort, das beim Erstellen der Planung vergeben wurde).
+6. Dauer und Anzahl Vorschlaege waehlen.
+7. Auf Berechnen klicken.
+8. Mit Plan loeschen wird die gesamte Planung entfernt (nur mit Loesch-Kennwort).
 
 ## Wie gerechnet wird
 
@@ -22,7 +29,8 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
 ## Hinweise
 
 - Alles ist anonym (Person 1, Person 2, ...).
-- Daten werden lokal im Browser UND in Supabase Cloud gespeichert.
-- Plan-Links ermöglichen geräteübergreifende Synchronisation.
-- Alle Geräte mit demselben Plan-Link sehen die gleichen Markierungen (nach kurzer Verzögerung).
-- Neu planen loescht alle bisherigen Eingaben komplett und startet mit einer frischen Planung.
+- Die eigentliche Planung wird in Supabase Cloud gespeichert.
+- Fuer die aktuelle Sitzung liegen Zugriffs-Kennwort und lokaler Zwischenstand nur im `sessionStorage` des aktuellen Browser-Tabs und verschwinden beim Schliessen des Tabs.
+- Plan-Links enthalten nur die Plan-ID. Das Zugriffs-Kennwort muss separat geteilt werden.
+- Alle Cloud-Zugriffe laufen ueber Supabase-RPC-Funktionen (kein direkter Tabellenzugriff im Frontend).
+- Plan loeschen entfernt alle bisherigen Eingaben komplett und benoetigt das Loesch-Kennwort.
