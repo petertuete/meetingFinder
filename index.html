@@ -268,7 +268,7 @@
       .cell {
         position: relative;
         height: 24px;
-        touch-action: none;
+        touch-action: pan-y;
         cursor: crosshair;
       }
 
@@ -376,6 +376,12 @@
           position: sticky;
           top: 0.45rem;
           z-index: 6;
+        }
+
+        .week-board {
+          width: calc(100% - 14px);
+          margin-right: 14px;
+          max-width: 100%;
         }
 
         .week-header,
@@ -551,6 +557,9 @@
       let pollTimer = null;
       let boardBuilt = false;
       let mobileDayIndex = ((new Date().getDay() + 6) % 7);
+      let swipeStartX = 0;
+      let swipeStartY = 0;
+      let swipeTracking = false;
 
       const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
@@ -595,6 +604,12 @@
           const day = Number(elem.dataset.day);
           elem.classList.toggle("mobile-day-hidden", day !== mobileDayIndex);
         });
+      }
+
+      function shiftMobileDay(step) {
+        mobileDayIndex = (mobileDayIndex + step + 7) % 7;
+        mobileDaySelect.value = String(mobileDayIndex);
+        applyMobileDayFilter();
       }
 
       function buildStorageKey() {
@@ -983,6 +998,12 @@
       }
 
       function handlePointerDown(event) {
+        if (isMobileLayout() && event.pointerType === "touch") {
+          swipeStartX = event.clientX;
+          swipeStartY = event.clientY;
+          swipeTracking = true;
+        }
+
         if (!isCellElement(event.target)) return;
         if (!getActive()) return;
 
@@ -994,6 +1015,7 @@
 
         paintMode = active.slots.has(key) ? "remove" : "add";
         isPainting = true;
+        swipeTracking = false;
         setCell(dayIndex, slotIndex);
         paintBoard();
         clearResults("Verfügbarkeit geändert. Für neue Vorschläge bitte berechnen.");
@@ -1010,11 +1032,20 @@
         paintBoard();
       }
 
-      function handlePointerUp() {
+      function handlePointerUp(event) {
+        if (!isPainting && swipeTracking && isMobileLayout() && event.pointerType === "touch") {
+          const deltaX = event.clientX - swipeStartX;
+          const deltaY = event.clientY - swipeStartY;
+          if (Math.abs(deltaX) > 52 && Math.abs(deltaX) > Math.abs(deltaY) + 12) {
+            shiftMobileDay(deltaX < 0 ? 1 : -1);
+          }
+        }
+
         if (isPainting) {
           saveState();
         }
         isPainting = false;
+        swipeTracking = false;
       }
 
       function clearResults(message) {
