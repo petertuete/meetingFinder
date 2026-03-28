@@ -114,6 +114,50 @@
         margin-bottom: 0.7rem;
       }
 
+      .mobile-only {
+        display: none;
+      }
+
+      .mobile-sticky-bar {
+        margin-bottom: 0.7rem;
+        padding: 0.65rem;
+        border: 1px solid #d7e4ec;
+        border-radius: 12px;
+        background: #f7fbfd;
+        box-shadow: 0 8px 22px rgba(30, 41, 55, 0.1);
+      }
+
+      .mobile-sticky-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+
+      .mobile-more {
+        grid-column: 1 / -1;
+      }
+
+      .mobile-more summary {
+        list-style: none;
+        cursor: pointer;
+        border: 1px solid #c7d4dd;
+        border-radius: 10px;
+        padding: 0.5rem 0.62rem;
+        background: #fff;
+        color: #2a4255;
+        font-weight: 500;
+      }
+
+      .mobile-more summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .mobile-more-panel {
+        margin-top: 0.45rem;
+        display: grid;
+        gap: 0.45rem;
+      }
+
       .chip {
         background: #eef4f7;
         border: 1px solid #d5e3ea;
@@ -251,6 +295,10 @@
         );
       }
 
+      .mobile-day-hidden {
+        display: none !important;
+      }
+
       .results-list {
         list-style: none;
         padding: 0;
@@ -316,9 +364,23 @@
           grid-template-columns: 1fr;
         }
 
+        .mobile-only {
+          display: block;
+        }
+
+        .main-toolbar {
+          display: none;
+        }
+
+        .mobile-sticky-bar {
+          position: sticky;
+          top: 0.45rem;
+          z-index: 6;
+        }
+
         .week-header,
         .week-row {
-          grid-template-columns: 62px repeat(7, minmax(62px, 1fr));
+          grid-template-columns: 62px minmax(130px, 1fr);
         }
       }
     </style>
@@ -369,7 +431,24 @@
         <section class="grid">
           <article class="card planner-card">
             <h2>Wochenansicht</h2>
-            <div class="toolbar">
+            <div id="mobile-sticky-bar" class="mobile-sticky-bar mobile-only">
+              <div class="mobile-sticky-grid">
+                <select id="mobile-day-select" aria-label="Tag auswählen"></select>
+                <select id="mobile-participant-select" aria-label="Aktive Person auswählen"></select>
+                <button id="mobile-add-participant" class="btn-primary" type="button">+ Person</button>
+                <button id="mobile-calc" class="btn-soft" type="button">Berechnen</button>
+                <details id="mobile-more-menu" class="mobile-more">
+                  <summary>Mehr Aktionen</summary>
+                  <div class="mobile-more-panel">
+                    <button id="mobile-copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
+                    <button id="mobile-clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
+                    <button id="mobile-reset-plan" class="btn-danger" type="button">Plan löschen</button>
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <div class="toolbar main-toolbar">
               <span id="participant-count" class="chip">Teilnehmer: 0</span>
               <span id="plan-chip" class="chip">Plan: ...</span>
               <label for="participant-select">Aktive Person:</label>
@@ -442,6 +521,14 @@
 
       const board = document.getElementById("week-board");
       const participantSelect = document.getElementById("participant-select");
+      const mobileParticipantSelect = document.getElementById("mobile-participant-select");
+      const mobileDaySelect = document.getElementById("mobile-day-select");
+      const mobileAddParticipantBtn = document.getElementById("mobile-add-participant");
+      const mobileCalcBtn = document.getElementById("mobile-calc");
+      const mobileCopyLinkBtn = document.getElementById("mobile-copy-link");
+      const mobileClearCurrentBtn = document.getElementById("mobile-clear-current");
+      const mobileResetPlanBtn = document.getElementById("mobile-reset-plan");
+      const mobileMoreMenu = document.getElementById("mobile-more-menu");
       const participantCount = document.getElementById("participant-count");
       const planChip = document.getElementById("plan-chip");
       const syncStatus = document.getElementById("sync-status");
@@ -463,6 +550,7 @@
       let deleteCode = "";
       let pollTimer = null;
       let boardBuilt = false;
+      let mobileDayIndex = ((new Date().getDay() + 6) % 7);
 
       const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
@@ -474,6 +562,39 @@
       function showPlanner() {
         homeSection.classList.remove("active");
         plannerSection.classList.add("active");
+        applyMobileDayFilter();
+      }
+
+      function isMobileLayout() {
+        return window.matchMedia("(max-width: 980px)").matches;
+      }
+
+      function setupMobileDaySelect() {
+        mobileDaySelect.innerHTML = "";
+        dayLabels.forEach((label, index) => {
+          const option = document.createElement("option");
+          option.value = String(index);
+          option.textContent = label;
+          mobileDaySelect.appendChild(option);
+        });
+        mobileDaySelect.value = String(mobileDayIndex);
+      }
+
+      function applyMobileDayFilter() {
+        if (!boardBuilt) return;
+
+        const mobile = isMobileLayout();
+        if (!mobile) {
+          board.querySelectorAll(".mobile-day-hidden").forEach((elem) => {
+            elem.classList.remove("mobile-day-hidden");
+          });
+          return;
+        }
+
+        board.querySelectorAll("[data-day]").forEach((elem) => {
+          const day = Number(elem.dataset.day);
+          elem.classList.toggle("mobile-day-hidden", day !== mobileDayIndex);
+        });
       }
 
       function buildStorageKey() {
@@ -742,6 +863,7 @@
 
       function renderParticipantSelect() {
         participantSelect.innerHTML = "";
+        mobileParticipantSelect.innerHTML = "";
 
         const placeholder = document.createElement("option");
         placeholder.value = "";
@@ -750,20 +872,29 @@
           : "Zuerst 'Nächste anonyme Person' klicken";
         participantSelect.appendChild(placeholder);
 
+        const mobilePlaceholder = placeholder.cloneNode(true);
+        mobileParticipantSelect.appendChild(mobilePlaceholder);
+
         participants.forEach((p) => {
           const option = document.createElement("option");
           option.value = p.id;
           option.textContent = p.label;
           participantSelect.appendChild(option);
+
+          const mobileOption = option.cloneNode(true);
+          mobileParticipantSelect.appendChild(mobileOption);
         });
 
         if (activeId) {
           participantSelect.value = activeId;
+          mobileParticipantSelect.value = activeId;
         } else {
           participantSelect.value = "";
+          mobileParticipantSelect.value = "";
         }
 
         participantSelect.disabled = !activeId;
+        mobileParticipantSelect.disabled = !activeId;
         participantCount.textContent = `Teilnehmer: ${participants.length}`;
       }
 
@@ -777,10 +908,11 @@
         spacer.textContent = "Zeit";
         header.appendChild(spacer);
 
-        dayLabels.forEach((label) => {
+        dayLabels.forEach((label, dayIndex) => {
           const d = document.createElement("div");
           d.className = "day-label";
           d.textContent = label;
+          d.dataset.day = String(dayIndex);
           header.appendChild(d);
         });
         board.appendChild(header);
@@ -809,6 +941,7 @@
         board.addEventListener("pointermove", handlePointerMove);
         window.addEventListener("pointerup", handlePointerUp);
         boardBuilt = true;
+        applyMobileDayFilter();
       }
 
       function availabilityCount(dayIndex, slotIndex) {
@@ -889,6 +1022,15 @@
         resultsEmpty.textContent = message || "Noch keine Berechnung gestartet.";
         resultsEmpty.style.display = "block";
         stats.textContent = "";
+      }
+
+      function clearCurrentParticipantSlots() {
+        const active = getActive();
+        if (!active) return;
+        active.slots.clear();
+        paintBoard();
+        clearResults("Markierungen der aktiven Person wurden entfernt.");
+        saveState();
       }
 
       async function resetPlanning() {
@@ -1047,6 +1189,7 @@
 
         renderParticipantSelect();
         paintBoard();
+        applyMobileDayFilter();
         clearResults(
           restoredCloud || restoredLocal
             ? "Plan geladen. Bitte zuerst 'Nächste anonyme Person' klicken."
@@ -1066,30 +1209,61 @@
       participantSelect.addEventListener("change", (event) => {
         if (!event.target.value) {
           activeId = null;
+          renderParticipantSelect();
           paintBoard();
           return;
         }
         activeId = event.target.value;
+        renderParticipantSelect();
+        paintBoard();
+        saveState();
+      });
+
+      mobileParticipantSelect.addEventListener("change", (event) => {
+        if (!event.target.value) {
+          activeId = null;
+          renderParticipantSelect();
+          paintBoard();
+          return;
+        }
+        activeId = event.target.value;
+        renderParticipantSelect();
         paintBoard();
         saveState();
       });
 
       document.getElementById("add-participant").addEventListener("click", addParticipant);
+      mobileAddParticipantBtn.addEventListener("click", addParticipant);
       document.getElementById("copy-link").addEventListener("click", copyPlanLink);
+      mobileCopyLinkBtn.addEventListener("click", () => {
+        copyPlanLink();
+        mobileMoreMenu.open = false;
+      });
 
-      document.getElementById("clear-current").addEventListener("click", () => {
-        const active = getActive();
-        if (!active) return;
-        active.slots.clear();
-        paintBoard();
-        clearResults("Markierungen der aktiven Person wurden entfernt.");
-        saveState();
+      document.getElementById("clear-current").addEventListener("click", clearCurrentParticipantSlots);
+      mobileClearCurrentBtn.addEventListener("click", () => {
+        clearCurrentParticipantSlots();
+        mobileMoreMenu.open = false;
       });
 
       durationSelect.addEventListener("change", saveState);
       topSelect.addEventListener("change", saveState);
       document.getElementById("reset-plan").addEventListener("click", resetPlanning);
+      mobileResetPlanBtn.addEventListener("click", () => {
+        resetPlanning();
+        mobileMoreMenu.open = false;
+      });
       document.getElementById("calc").addEventListener("click", calculate);
+      mobileCalcBtn.addEventListener("click", calculate);
+
+      mobileDaySelect.addEventListener("change", (event) => {
+        mobileDayIndex = Number(event.target.value);
+        applyMobileDayFilter();
+      });
+
+      window.addEventListener("resize", () => {
+        applyMobileDayFilter();
+      });
 
       createPlanBtn.addEventListener("click", async () => {
         const access = createAccessPasswordInput.value.trim();
@@ -1166,6 +1340,8 @@
       });
 
       (function bootstrapFromUrl() {
+        setupMobileDaySelect();
+
         const url = new URL(window.location.href);
         const id = (url.searchParams.get("plan") || "").trim().toLowerCase();
 
