@@ -1,3 +1,6 @@
+
+
+
 <!doctype html>
 <html lang="de">
   <head>
@@ -5,6 +8,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Anonymer Meeting-Zeitfinder</title>
     <style>
+      /* Einzeilige Darstellung für mobile-availability-row und Label */
+      .mobile-availability-row {
+        display: grid;
+        grid-template-columns: 10em minmax(0,1fr);
+        align-items: center;
+        gap: 0.3rem;
+        margin-bottom: 1.1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+      }
+      .mobile-availability-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5em;
+        min-width: 0;
+        white-space: nowrap;
+      }
+      .mobile-availability-times {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        flex-wrap: nowrap;
+        min-width: 0;
+      }
+      .mobile-availability-row input[type="time"] {
+        width: 5em;
+        min-width: 0;
+        max-width: 100%;
+        margin-right: 0;
+        height: 2.1em;
+        line-height: 2.1em;
+        vertical-align: middle;
+        font-size: 1em;
+        box-sizing: border-box;
+      }
+
       @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
       :root {
@@ -439,7 +479,7 @@
             <h2>Wochenansicht</h2>
             <div id="mobile-sticky-bar" class="mobile-sticky-bar mobile-only">
               <div class="mobile-sticky-grid">
-                <select id="mobile-day-select" aria-label="Tag auswählen"></select>
+
                 <select id="mobile-participant-select" aria-label="Aktive Person auswählen"></select>
                 <button id="mobile-add-participant" class="btn-primary" type="button">+ Person</button>
                 <button id="mobile-calc" class="btn-soft" type="button">Berechnen</button>
@@ -465,9 +505,74 @@
               <button id="reset-plan" class="btn-danger" type="button">Plan löschen</button>
             </div>
 
-            <div id="week-board" class="week-board"></div>
-            <p class="hint">Tippen oder klicken und ziehen: markiert Verfügbarkeit. Nochmals ziehen: entfernt Markierung.</p>
+            <!-- <div id="week-board" class="week-board"></div> -->
+            <div class="mobile-availability-form">
+              <h3>Verfügbarkeit je Wochentag</h3>
+              <form id="mobile-availability-form">
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="mo-enabled" checked> Mo</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="mo-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="mo-to" step="1800" value="17:00">
+                  </div>
+                </div>
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="di-enabled" checked> Di</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="di-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="di-to" step="1800" value="17:00">
+                  </div>
+                </div>
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="mi-enabled" checked> Mi</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="mi-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="mi-to" step="1800" value="17:00">
+                  </div>
+                  </div>
+                </div>
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="do-enabled" checked> Do</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="do-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="do-to" step="1800" value="17:00">
+                  </div>
+                </div>
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="fr-enabled" checked> Fr</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="fr-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="fr-to" step="1800" value="17:00">
+                  </div>
+                </div>
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="sa-enabled"> Sa</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="sa-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="sa-to" step="1800" value="17:00">
+                  </div>
+                </div>
+                <div class="mobile-availability-row">
+                  <label class="mobile-availability-label"><input type="checkbox" name="so-enabled"> So</label>
+                  <div class="mobile-availability-times">
+                    <input type="time" name="so-from" step="1800" value="08:00">
+                    <span class="mobile-availability-bis">bis</span>
+                    <input type="time" name="so-to" step="1800" value="17:00">
+                  </div>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top:0.7rem;width:100%">Übernehmen</button>
+              </form>
+            </div>
+            <p class="hint">Zeitfenster je Wochentag direkt eingeben und übernehmen.</p>
+            <!-- <p class="hint">Tippen oder klicken und ziehen: markiert Verfügbarkeit. Nochmals ziehen: entfernt Markierung.</p> -->
             <p id="sync-status" class="hint">Cloud: wird vorbereitet...</p>
+
           </article>
 
           <article class="card planner-card">
@@ -528,7 +633,7 @@
       const board = document.getElementById("week-board");
       const participantSelect = document.getElementById("participant-select");
       const mobileParticipantSelect = document.getElementById("mobile-participant-select");
-      const mobileDaySelect = document.getElementById("mobile-day-select");
+
       const mobileAddParticipantBtn = document.getElementById("mobile-add-participant");
       const mobileCalcBtn = document.getElementById("mobile-calc");
       const mobileCopyLinkBtn = document.getElementById("mobile-copy-link");
@@ -563,7 +668,55 @@
       let swipeDidChangeDay = false;
       let pendingTouchPaint = null;
 
+
       const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+      // --- Zeitfenster-Formular-Logik ---
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("mobile-availability-form");
+        if (!form) return;
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const active = getActive();
+          if (!active) {
+            setSyncStatus("Bitte zuerst eine Person anlegen und auswählen.");
+            return;
+          }
+          active.slots.clear();
+          const dayMap = [
+            { key: "mo", idx: 0 },
+            { key: "di", idx: 1 },
+            { key: "mi", idx: 2 },
+            { key: "do", idx: 3 },
+            { key: "fr", idx: 4 },
+            { key: "sa", idx: 5 },
+            { key: "so", idx: 6 },
+          ];
+          for (const { key, idx } of dayMap) {
+            const enabled = form.elements[`${key}-enabled`].checked;
+            if (!enabled) continue;
+            const from = form.elements[`${key}-from`].value;
+            const to = form.elements[`${key}-to`].value;
+            if (!from || !to) continue;
+            // Zeit in Minuten ab Tagesbeginn
+            const [fromH, fromM] = from.split(":").map(Number);
+            const [toH, toM] = to.split(":").map(Number);
+            let fromMin = fromH * 60 + fromM;
+            let toMin = toH * 60 + toM;
+            // Begrenzung auf Tageszeitraum
+            fromMin = Math.max(dayStart, fromMin);
+            toMin = Math.min(dayEnd, toMin);
+            for (let min = fromMin; min < toMin; min += slotStep) {
+              const slotIdx = Math.floor((min - dayStart) / slotStep);
+              if (slotIdx >= 0 && slotIdx < slotsPerDay) {
+                active.slots.add(`${idx}-${slotIdx}`);
+              }
+            }
+          }
+          saveState();
+          setSyncStatus("Zeitfenster übernommen und gespeichert.");
+        });
+      });
 
       function showHome() {
         homeSection.classList.add("active");
@@ -580,16 +733,7 @@
         return window.matchMedia("(max-width: 980px)").matches;
       }
 
-      function setupMobileDaySelect() {
-        mobileDaySelect.innerHTML = "";
-        dayLabels.forEach((label, index) => {
-          const option = document.createElement("option");
-          option.value = String(index);
-          option.textContent = label;
-          mobileDaySelect.appendChild(option);
-        });
-        mobileDaySelect.value = String(mobileDayIndex);
-      }
+
 
       function applyMobileDayFilter() {
         if (!boardBuilt) return;
@@ -700,7 +844,7 @@
         }
 
         renderParticipantSelect();
-        paintBoard();
+        // paintBoard(); // Raster nicht mehr benötigt
         saveLocalState();
         isApplyingRemote = false;
         return true;
@@ -871,7 +1015,7 @@
         participants.push({ id, label, slots: new Set() });
         activeId = id;
         renderParticipantSelect();
-        paintBoard();
+        // paintBoard(); // Raster nicht mehr benötigt
         clearResults("Neue Person angelegt. Verfügbarkeit direkt im Raster markieren.");
         if (shouldSave) {
           saveState();
@@ -915,76 +1059,14 @@
         participantCount.textContent = `Teilnehmer: ${participants.length}`;
       }
 
-      function buildBoard() {
-        board.innerHTML = "";
-        const header = document.createElement("div");
-        header.className = "week-header";
-
-        const spacer = document.createElement("div");
-        spacer.className = "day-label";
-        spacer.textContent = "Zeit";
-        header.appendChild(spacer);
-
-        dayLabels.forEach((label, dayIndex) => {
-          const d = document.createElement("div");
-          d.className = "day-label";
-          d.textContent = label;
-          d.dataset.day = String(dayIndex);
-          header.appendChild(d);
-        });
-        board.appendChild(header);
-
-        for (let slot = 0; slot < slotsPerDay; slot += 1) {
-          const row = document.createElement("div");
-          row.className = "week-row";
-
-          const time = document.createElement("div");
-          time.className = "time-label mono";
-          time.textContent = toClock(dayStart + slot * slotStep);
-          row.appendChild(time);
-
-          for (let day = 0; day < 7; day += 1) {
-            const cell = document.createElement("div");
-            cell.className = "cell";
-            cell.dataset.day = String(day);
-            cell.dataset.slot = String(slot);
-            row.appendChild(cell);
-          }
-
-          board.appendChild(row);
-        }
-
-        board.addEventListener("pointerdown", handlePointerDown);
-        board.addEventListener("pointermove", handlePointerMove);
-        window.addEventListener("pointerup", handlePointerUp);
-        boardBuilt = true;
-        applyMobileDayFilter();
-      }
+      // buildBoard entfernt, da Raster nicht mehr verwendet wird
 
       function availabilityCount(dayIndex, slotIndex) {
         const key = keyFor(dayIndex, slotIndex);
         return participants.filter((p) => p.slots.has(key)).length;
       }
 
-      function paintBoard() {
-        const active = getActive();
-        const max = Math.max(participants.length, 1);
-
-        board.querySelectorAll(".cell").forEach((cell) => {
-          const dayIndex = Number(cell.dataset.day);
-          const slotIndex = Number(cell.dataset.slot);
-          const key = keyFor(dayIndex, slotIndex);
-          const count = availabilityCount(dayIndex, slotIndex);
-          const intensity = count / max;
-
-          cell.style.setProperty("--heat", String(0.12 + intensity * 0.42));
-          if (active && active.slots.has(key)) {
-            cell.classList.add("mine");
-          } else {
-            cell.classList.remove("mine");
-          }
-        });
-      }
+      // paintBoard entfernt, da Raster nicht mehr verwendet wird
 
       function setCell(dayIndex, slotIndex) {
         const active = getActive();
@@ -1222,7 +1304,7 @@
         renderParticipantSelect();
 
         if (!boardBuilt) {
-          buildBoard();
+          // buildBoard(); // entfernt, da nicht mehr benötigt
         }
 
         if (mode === "create") {
@@ -1327,10 +1409,7 @@
       document.getElementById("calc").addEventListener("click", calculate);
       mobileCalcBtn.addEventListener("click", calculate);
 
-      mobileDaySelect.addEventListener("change", (event) => {
-        mobileDayIndex = Number(event.target.value);
-        applyMobileDayFilter();
-      });
+
 
       window.addEventListener("resize", () => {
         applyMobileDayFilter();
@@ -1411,7 +1490,7 @@
       });
 
       (function bootstrapFromUrl() {
-        setupMobileDaySelect();
+
 
         const url = new URL(window.location.href);
         const id = (url.searchParams.get("plan") || "").trim().toLowerCase();
