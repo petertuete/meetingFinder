@@ -716,6 +716,8 @@
             clearResults(`${removedCount} Person(en) ohne aktive Zeiten wurden entfernt.`);
           }
 
+          activeId = null;
+          renderParticipantSelect();
           saveState();
           setSyncStatus("Zeitfenster übernommen und gespeichert.");
           showConfirmationCheckmark();
