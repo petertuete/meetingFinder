@@ -29,6 +29,7 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
 
 - Alles ist anonym (Person 1, Person 2, ...).
 - Die eigentliche Planung wird in Supabase Cloud gespeichert.
+- Zugriffs- und Lösch-Kennwort werden **niemals im Klartext gespeichert** – nur als bcrypt-Hash serverseitig in der Datenbank.
 - Für die aktuelle Sitzung liegen Zugriffs-Kennwort und lokaler Zwischenstand nur im `sessionStorage` des aktuellen Browser-Tabs und verschwinden beim Schließen des Tabs.
 - Plan-Links enthalten nur die Plan-ID. Das Zugriffs-Kennwort muss separat geteilt werden.
 - Alle Cloud-Zugriffe laufen über Supabase-RPC-Funktionen (kein direkter Tabellenzugriff im Frontend).
