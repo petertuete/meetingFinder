@@ -79,6 +79,34 @@
         font-weight: 700;
       }
 
+      /* Bestätigung-Haken Animation */
+      .confirmation-checkmark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 6rem;
+        color: #2e7d32;
+        pointer-events: none;
+        animation: checkmarkPulse 1.5s ease-out forwards;
+        text-shadow: 0 0 20px rgba(46, 125, 50, 0.6);
+      }
+
+      @keyframes checkmarkPulse {
+        0% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(0.5);
+        }
+        50% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+
       @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
       :root {
@@ -543,6 +571,7 @@
             <p class="hint">Zeitfenster je Wochentag direkt eingeben und übernehmen.</p>
             <!-- <p class="hint">Tippen oder klicken und ziehen: markiert Verfügbarkeit. Nochmals ziehen: entfernt Markierung.</p> -->
             <p id="sync-status" class="hint">Cloud: wird vorbereitet...</p>
+            <div id="checkmark-container"></div>
 
           </article>
 
@@ -689,6 +718,7 @@
 
           saveState();
           setSyncStatus("Zeitfenster übernommen und gespeichert.");
+          showConfirmationCheckmark();
         });
       });
 
@@ -712,6 +742,21 @@
 
       function setSyncStatus(message) {
         syncStatus.textContent = `Cloud: ${message}`;
+      }
+
+      function showConfirmationCheckmark() {
+        const container = document.getElementById("checkmark-container");
+        if (!container) return;
+        
+        const checkmark = document.createElement("div");
+        checkmark.className = "confirmation-checkmark";
+        checkmark.textContent = "✓";
+        
+        container.appendChild(checkmark);
+        
+        setTimeout(() => {
+          checkmark.remove();
+        }, 1500);
       }
 
       function setPlanId(id) {
