@@ -68,6 +68,17 @@
         box-sizing: border-box;
       }
 
+      #mobile-availability-form.is-disabled {
+        opacity: 0.55;
+      }
+
+      .mobile-availability-form .availability-lock-hint {
+        margin: 0.25rem 0 0.7rem;
+        color: #c62828;
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
       @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
       :root {
@@ -167,6 +178,28 @@
       .card.planner-card h2 {
         margin: 0 0 0.65rem;
         font-size: 1.05rem;
+      }
+
+      .section-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.55rem;
+        margin-bottom: 0.65rem;
+      }
+
+      .section-title-row h2 {
+        margin: 0;
+      }
+
+      .active-person-status {
+        background: #eef4f7;
+        border: 1px solid #d5e3ea;
+        color: #244155;
+        border-radius: 999px;
+        padding: 0.28rem 0.62rem;
+        font-size: 0.84rem;
+        white-space: nowrap;
       }
 
       .toolbar {
@@ -286,82 +319,6 @@
         gap: 0.65rem;
       }
 
-      .week-board {
-        overflow: auto;
-        border: 1px solid #d8e2e9;
-        border-radius: 12px;
-        background: #fff;
-      }
-
-      .week-header,
-      .week-row {
-        display: grid;
-        grid-template-columns: 72px repeat(7, minmax(70px, 1fr));
-      }
-
-      .week-header {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-      }
-
-      .cell,
-      .time-label,
-      .day-label {
-        border-right: 1px solid #e5edf2;
-        border-bottom: 1px solid #e5edf2;
-      }
-
-      .day-label {
-        background: #f3f7fa;
-        text-align: center;
-        padding: 0.5rem 0.25rem;
-        font-size: 0.82rem;
-        font-weight: 700;
-      }
-
-      .time-label {
-        background: #f8fbfd;
-        text-align: center;
-        font-size: 0.74rem;
-        color: var(--ink-soft);
-        padding-top: 0.4rem;
-      }
-
-      .cell {
-        position: relative;
-        height: 24px;
-        touch-action: pan-y;
-        cursor: crosshair;
-      }
-
-      .cell::before {
-        content: "";
-        position: absolute;
-        inset: 2px;
-        border-radius: 4px;
-        background: rgba(11, 114, 133, var(--heat, 0));
-      }
-
-      .cell.mine::after {
-        content: "";
-        position: absolute;
-        inset: 3px;
-        border-radius: 4px;
-        border: 2px solid rgba(11, 114, 133, 0.95);
-        background: repeating-linear-gradient(
-          -45deg,
-          rgba(11, 114, 133, 0.15) 0,
-          rgba(11, 114, 133, 0.15) 4px,
-          rgba(11, 114, 133, 0.26) 4px,
-          rgba(11, 114, 133, 0.26) 8px
-        );
-      }
-
-      .mobile-day-hidden {
-        display: none !important;
-      }
-
       .results-list {
         list-style: none;
         padding: 0;
@@ -440,17 +397,6 @@
           top: 0.45rem;
           z-index: 6;
         }
-
-        .week-board {
-          width: calc(100% - 28px);
-          margin-right: 28px;
-          max-width: 100%;
-        }
-
-        .week-header,
-        .week-row {
-          grid-template-columns: 62px minmax(130px, 1fr);
-        }
       }
     </style>
   </head>
@@ -496,8 +442,10 @@
           <details id="mobile-more-menu" class="mobile-more" style="margin-left:auto;">
             <summary aria-label="Mehr Aktionen" style="border:none;background:none;padding:0 0.5em;font-size:2em;line-height:1;cursor:pointer;">&#9776;</summary>
             <div class="mobile-more-panel">
-              <button id="mobile-copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
+              <label for="mobile-participant-select">Andere Person auswählen</label>
+              <select id="mobile-participant-select" aria-label="Aktive Person auswählen"></select>
               <button id="mobile-clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
+              <button id="mobile-copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
               <button id="mobile-reset-plan" class="btn-danger" type="button">Plan löschen</button>
             </div>
           </details>
@@ -510,31 +458,31 @@
 
         <section class="grid">
           <article class="card planner-card">
-            <h2>Wochenansicht</h2>
+            <div class="section-title-row">
+              <h2>Wochenansicht</h2>
+              <span id="active-person-status" class="active-person-status">Aktiv: -</span>
+            </div>
             <div id="mobile-sticky-bar" class="mobile-sticky-bar mobile-only">
               <div style="display:flex;flex-direction:column;gap:0.5rem;">
                 <button id="mobile-add-participant" class="btn-primary" type="button" style="width:100%;">+ Person</button>
-                <select id="mobile-participant-select" aria-label="Aktive Person auswählen"></select>
               </div>
             </div>
 
             <div class="toolbar main-toolbar">
               <span id="participant-count" class="chip">Teilnehmer: 0</span>
               <span id="plan-chip" class="chip">Plan: ...</span>
-              <label for="participant-select">Aktive Person:</label>
-              <select id="participant-select"></select>
               <button id="add-participant" class="btn-primary" type="button">Nächste anonyme Person</button>
               <button id="copy-link" class="btn-soft" type="button">Plan-Link kopieren</button>
               <button id="clear-current" class="btn-soft" type="button">Aktive Person löschen</button>
               <button id="reset-plan" class="btn-danger" type="button">Plan löschen</button>
             </div>
 
-            <!-- <div id="week-board" class="week-board"></div> -->
-            <div class="mobile-availability-form">
+            <div id="mobile-availability-panel" class="mobile-availability-form">
               <h3>Verfügbarkeit je Wochentag</h3>
+              <p id="availability-lock-hint" class="availability-lock-hint" style="display:none;">Bitte zuerst + Person klicken, um Zeiten zu bearbeiten.</p>
               <form id="mobile-availability-form">
                 <div class="mobile-availability-row">
-                  <label class="mobile-availability-label"><input type="checkbox" name="mo-enabled" checked> Mo</label>
+                  <label class="mobile-availability-label"><input type="checkbox" name="mo-enabled"> Mo</label>
                   <div class="mobile-availability-times">
                     <input type="time" name="mo-from" step="1800" value="18:00">
                     <span class="mobile-availability-bis">bis</span>
@@ -542,7 +490,7 @@
                   </div>
                 </div>
                 <div class="mobile-availability-row">
-                  <label class="mobile-availability-label"><input type="checkbox" name="di-enabled" checked> Di</label>
+                  <label class="mobile-availability-label"><input type="checkbox" name="di-enabled"> Di</label>
                   <div class="mobile-availability-times">
                     <input type="time" name="di-from" step="1800" value="18:00">
                     <span class="mobile-availability-bis">bis</span>
@@ -550,16 +498,15 @@
                   </div>
                 </div>
                 <div class="mobile-availability-row">
-                  <label class="mobile-availability-label"><input type="checkbox" name="mi-enabled" checked> Mi</label>
+                  <label class="mobile-availability-label"><input type="checkbox" name="mi-enabled"> Mi</label>
                   <div class="mobile-availability-times">
                     <input type="time" name="mi-from" step="1800" value="18:00">
                     <span class="mobile-availability-bis">bis</span>
                     <input type="time" name="mi-to" step="1800" value="21:00">
                   </div>
-                  </div>
                 </div>
                 <div class="mobile-availability-row">
-                  <label class="mobile-availability-label"><input type="checkbox" name="do-enabled" checked> Do</label>
+                  <label class="mobile-availability-label"><input type="checkbox" name="do-enabled"> Do</label>
                   <div class="mobile-availability-times">
                     <input type="time" name="do-from" step="1800" value="18:00">
                     <span class="mobile-availability-bis">bis</span>
@@ -567,7 +514,7 @@
                   </div>
                 </div>
                 <div class="mobile-availability-row">
-                  <label class="mobile-availability-label"><input type="checkbox" name="fr-enabled" checked> Fr</label>
+                  <label class="mobile-availability-label"><input type="checkbox" name="fr-enabled"> Fr</label>
                   <div class="mobile-availability-times">
                     <input type="time" name="fr-from" step="1800" value="18:00">
                     <span class="mobile-availability-bis">bis</span>
@@ -635,10 +582,20 @@
       const dayStart = 6 * 60;
       const dayEnd = 22 * 60;
       const slotsPerDay = (dayEnd - dayStart) / slotStep;
+      const availabilityDayMap = [
+        { key: "mo", idx: 0 },
+        { key: "di", idx: 1 },
+        { key: "mi", idx: 2 },
+        { key: "do", idx: 3 },
+        { key: "fr", idx: 4 },
+        { key: "sa", idx: 5 },
+        { key: "so", idx: 6 },
+      ];
       const storageKeyPrefix = "meetingFinderStateV2";
       const credentialsKeyPrefix = "meetingFinderCredsV1";
       const saveDelayMs = 450;
       const pollIntervalMs = 12000;
+      const maxParticipants = 100;
       const supabaseUrl = "https://zbqhnomzdaqfmauojrzx.supabase.co";
       const supabaseAnonKey = "sb_publishable_hjHji7zVw0V0ceMMqTJVDw_o-fK27Ol";
 
@@ -654,17 +611,16 @@
       const createDeletePasswordInput = document.getElementById("create-delete-password");
       const createPlanError = document.getElementById("create-plan-error");
 
-      const board = document.getElementById("week-board");
-      const participantSelect = document.getElementById("participant-select");
       const mobileParticipantSelect = document.getElementById("mobile-participant-select");
+      const addParticipantBtn = document.getElementById("add-participant");
 
       const mobileAddParticipantBtn = document.getElementById("mobile-add-participant");
-      const mobileCalcBtn = document.getElementById("mobile-calc");
       const mobileCopyLinkBtn = document.getElementById("mobile-copy-link");
       const mobileClearCurrentBtn = document.getElementById("mobile-clear-current");
       const mobileResetPlanBtn = document.getElementById("mobile-reset-plan");
       const mobileMoreMenu = document.getElementById("mobile-more-menu");
       const participantCount = document.getElementById("participant-count");
+      const activePersonStatus = document.getElementById("active-person-status");
       const planChip = document.getElementById("plan-chip");
       const syncStatus = document.getElementById("sync-status");
       const durationSelect = document.getElementById("duration");
@@ -672,11 +628,14 @@
       const resultsList = document.getElementById("results");
       const resultsEmpty = document.getElementById("results-empty");
       const stats = document.getElementById("stats");
+      const availabilityForm = document.getElementById("mobile-availability-form");
+      const availabilityLockHint = document.getElementById("availability-lock-hint");
+      const availabilityFormControls = availabilityForm
+        ? [...availabilityForm.querySelectorAll("input, button")]
+        : [];
 
       const participants = [];
       let activeId = null;
-      let isPainting = false;
-      let paintMode = "add";
       let saveTimer = null;
       let isApplyingRemote = false;
       let lastCloudTimestamp = 0;
@@ -684,20 +643,13 @@
       let accessCode = "";
       let deleteCode = "";
       let pollTimer = null;
-      let boardBuilt = false;
-      let mobileDayIndex = ((new Date().getDay() + 6) % 7);
-      let swipeStartX = 0;
-      let swipeStartY = 0;
-      let swipeTracking = false;
-      let swipeDidChangeDay = false;
-      let pendingTouchPaint = null;
 
 
       const sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
       // --- Zeitfenster-Formular-Logik ---
       document.addEventListener("DOMContentLoaded", () => {
-        const form = document.getElementById("mobile-availability-form");
+        const form = availabilityForm;
         if (!form) return;
         form.addEventListener("submit", (e) => {
           e.preventDefault();
@@ -706,17 +658,9 @@
             setSyncStatus("Bitte zuerst eine Person anlegen und auswählen.");
             return;
           }
+
           active.slots.clear();
-          const dayMap = [
-            { key: "mo", idx: 0 },
-            { key: "di", idx: 1 },
-            { key: "mi", idx: 2 },
-            { key: "do", idx: 3 },
-            { key: "fr", idx: 4 },
-            { key: "sa", idx: 5 },
-            { key: "so", idx: 6 },
-          ];
-          for (const { key, idx } of dayMap) {
+          for (const { key, idx } of availabilityDayMap) {
             const enabled = form.elements[`${key}-enabled`].checked;
             if (!enabled) continue;
             const from = form.elements[`${key}-from`].value;
@@ -737,6 +681,12 @@
               }
             }
           }
+
+          const removedCount = pruneParticipantsWithoutSlots();
+          if (removedCount > 0) {
+            clearResults(`${removedCount} Person(en) ohne aktive Zeiten wurden entfernt.`);
+          }
+
           saveState();
           setSyncStatus("Zeitfenster übernommen und gespeichert.");
         });
@@ -750,36 +700,6 @@
       function showPlanner() {
         homeSection.classList.remove("active");
         plannerSection.classList.add("active");
-        applyMobileDayFilter();
-      }
-
-      function isMobileLayout() {
-        return window.matchMedia("(max-width: 980px)").matches;
-      }
-
-
-
-      function applyMobileDayFilter() {
-        if (!boardBuilt) return;
-
-        const mobile = isMobileLayout();
-        if (!mobile) {
-          board.querySelectorAll(".mobile-day-hidden").forEach((elem) => {
-            elem.classList.remove("mobile-day-hidden");
-          });
-          return;
-        }
-
-        board.querySelectorAll("[data-day]").forEach((elem) => {
-          const day = Number(elem.dataset.day);
-          elem.classList.toggle("mobile-day-hidden", day !== mobileDayIndex);
-        });
-      }
-
-      function shiftMobileDay(step) {
-        mobileDayIndex = (mobileDayIndex + step + 7) % 7;
-        mobileDaySelect.value = String(mobileDayIndex);
-        applyMobileDayFilter();
       }
 
       function buildStorageKey() {
@@ -868,7 +788,6 @@
         }
 
         renderParticipantSelect();
-        // paintBoard(); // Raster nicht mehr benötigt
         saveLocalState();
         isApplyingRemote = false;
         return true;
@@ -939,6 +858,11 @@
 
       async function saveCloudState() {
         if (!planId || !accessCode) return;
+
+        if (participants.length > maxParticipants) {
+          setSyncStatus(`max. ${maxParticipants} Personen erlaubt`);
+          return;
+        }
 
         const state = buildPayload(false);
         const { data, error } = await sbClient.rpc("save_plan", {
@@ -1037,13 +961,90 @@
         return participants.find((p) => p.id === activeId) || null;
       }
 
+      function setAvailabilityFormDisabled(isDisabled) {
+        if (!availabilityForm) return;
+
+        availabilityFormControls.forEach((elem) => {
+          elem.disabled = isDisabled;
+        });
+
+        availabilityForm.classList.toggle("is-disabled", isDisabled);
+        availabilityLockHint.style.display = isDisabled ? "block" : "none";
+      }
+
+      function renderAvailabilityFormForActive() {
+        const form = availabilityForm;
+        if (!form) return;
+
+        // Reset to disabled for all days; values stay available as defaults.
+        for (const { key } of availabilityDayMap) {
+          form.elements[`${key}-enabled`].checked = false;
+        }
+
+        const active = getActive();
+        if (!active) {
+          setAvailabilityFormDisabled(true);
+          return;
+        }
+
+        setAvailabilityFormDisabled(false);
+
+        const dayBounds = Array.from({ length: 7 }, () => ({ min: Infinity, max: -1 }));
+        for (const slot of active.slots) {
+          const [dayIndex, slotIndex] = String(slot).split("-").map(Number);
+          if (!Number.isInteger(dayIndex) || !Number.isInteger(slotIndex)) continue;
+          if (dayIndex < 0 || dayIndex > 6 || slotIndex < 0 || slotIndex >= slotsPerDay) continue;
+          if (slotIndex < dayBounds[dayIndex].min) dayBounds[dayIndex].min = slotIndex;
+          if (slotIndex > dayBounds[dayIndex].max) dayBounds[dayIndex].max = slotIndex;
+        }
+
+        for (const { key, idx } of availabilityDayMap) {
+          const bounds = dayBounds[idx];
+          if (bounds.max < 0) continue;
+
+          const startMin = dayStart + bounds.min * slotStep;
+          const endMin = dayStart + (bounds.max + 1) * slotStep;
+
+          form.elements[`${key}-enabled`].checked = true;
+          form.elements[`${key}-from`].value = toClock(startMin);
+          form.elements[`${key}-to`].value = toClock(endMin);
+        }
+      }
+
+      function pruneParticipantsWithoutSlots() {
+        const previousActiveId = activeId;
+        const nextParticipants = participants.filter((p) => p.slots.size > 0);
+        const removedCount = participants.length - nextParticipants.length;
+
+        if (!removedCount) {
+          return 0;
+        }
+
+        participants.length = 0;
+        participants.push(...nextParticipants);
+
+        if (!participants.length) {
+          activeId = null;
+        } else if (!participants.some((p) => p.id === previousActiveId)) {
+          activeId = participants[0].id;
+        }
+
+        renderParticipantSelect();
+        return removedCount;
+      }
+
       function addParticipant(shouldSave = true) {
+        if (participants.length >= maxParticipants) {
+          setSyncStatus(`max. ${maxParticipants} Personen erreicht`);
+          clearResults(`Es sind maximal ${maxParticipants} Personen pro Planung erlaubt.`);
+          return;
+        }
+
         const id = crypto.randomUUID();
         const label = `Person ${participants.length + 1}`;
         participants.push({ id, label, slots: new Set() });
         activeId = id;
         renderParticipantSelect();
-        // paintBoard(); // Raster nicht mehr benötigt
         clearResults("Neue Person angelegt. Verfügbarkeit direkt im Raster markieren.");
         if (shouldSave) {
           saveState();
@@ -1051,7 +1052,6 @@
       }
 
       function renderParticipantSelect() {
-        participantSelect.innerHTML = "";
         mobileParticipantSelect.innerHTML = "";
 
         const placeholder = document.createElement("option");
@@ -1059,143 +1059,26 @@
         placeholder.textContent = activeId
           ? "Aktive Person wählen"
           : "Zuerst 'Nächste anonyme Person' klicken";
-        participantSelect.appendChild(placeholder);
-
-        const mobilePlaceholder = placeholder.cloneNode(true);
-        mobileParticipantSelect.appendChild(mobilePlaceholder);
+        mobileParticipantSelect.appendChild(placeholder);
 
         participants.forEach((p) => {
           const option = document.createElement("option");
           option.value = p.id;
           option.textContent = p.label;
-          participantSelect.appendChild(option);
-
-          const mobileOption = option.cloneNode(true);
-          mobileParticipantSelect.appendChild(mobileOption);
+          mobileParticipantSelect.appendChild(option);
         });
 
-        if (activeId) {
-          participantSelect.value = activeId;
-          mobileParticipantSelect.value = activeId;
-        } else {
-          participantSelect.value = "";
-          mobileParticipantSelect.value = "";
-        }
-
-        participantSelect.disabled = !activeId;
-        mobileParticipantSelect.disabled = !activeId;
+        mobileParticipantSelect.value = activeId || "";
+        mobileParticipantSelect.disabled = !participants.length;
         participantCount.textContent = `Teilnehmer: ${participants.length}`;
-      }
 
-      // buildBoard entfernt, da Raster nicht mehr verwendet wird
+        const canAddMore = participants.length < maxParticipants;
+        addParticipantBtn.disabled = !canAddMore;
+        mobileAddParticipantBtn.disabled = !canAddMore;
 
-      function availabilityCount(dayIndex, slotIndex) {
-        const key = keyFor(dayIndex, slotIndex);
-        return participants.filter((p) => p.slots.has(key)).length;
-      }
-
-      // paintBoard entfernt, da Raster nicht mehr verwendet wird
-
-      function setCell(dayIndex, slotIndex) {
         const active = getActive();
-        if (!active) return;
-
-        const key = keyFor(dayIndex, slotIndex);
-        if (paintMode === "add") active.slots.add(key);
-        if (paintMode === "remove") active.slots.delete(key);
-      }
-
-      function isCellElement(target) {
-        return target instanceof HTMLElement && target.classList.contains("cell");
-      }
-
-      function handlePointerDown(event) {
-        if (isMobileLayout() && event.pointerType === "touch") {
-          swipeStartX = event.clientX;
-          swipeStartY = event.clientY;
-          swipeTracking = true;
-          swipeDidChangeDay = false;
-        }
-
-        if (!isCellElement(event.target)) return;
-        if (!getActive()) return;
-
-        const dayIndex = Number(event.target.dataset.day);
-        const slotIndex = Number(event.target.dataset.slot);
-        const active = getActive();
-        const key = keyFor(dayIndex, slotIndex);
-        paintMode = active.slots.has(key) ? "remove" : "add";
-
-        if (isMobileLayout() && event.pointerType === "touch") {
-          pendingTouchPaint = { dayIndex, slotIndex, paintMode };
-          return;
-        }
-
-        event.preventDefault();
-        isPainting = true;
-        swipeTracking = false;
-        setCell(dayIndex, slotIndex);
-        paintBoard();
-        clearResults("Verfügbarkeit geändert. Für neue Vorschläge bitte berechnen.");
-      }
-
-      function handlePointerMove(event) {
-        if (isMobileLayout() && event.pointerType === "touch" && swipeTracking) {
-          const deltaX = event.clientX - swipeStartX;
-          const deltaY = event.clientY - swipeStartY;
-
-          if (!isPainting && Math.abs(deltaX) > 28 && Math.abs(deltaX) > Math.abs(deltaY) + 8) {
-            shiftMobileDay(deltaX < 0 ? 1 : -1);
-            swipeDidChangeDay = true;
-            swipeTracking = false;
-            pendingTouchPaint = null;
-            return;
-          }
-
-          if (!isPainting && pendingTouchPaint && Math.abs(deltaY) > 10 && Math.abs(deltaY) >= Math.abs(deltaX)) {
-            paintMode = pendingTouchPaint.paintMode;
-            isPainting = true;
-            setCell(pendingTouchPaint.dayIndex, pendingTouchPaint.slotIndex);
-            pendingTouchPaint = null;
-          }
-        }
-
-        if (!isPainting) return;
-        const elem = document.elementFromPoint(event.clientX, event.clientY);
-        if (!isCellElement(elem)) return;
-
-        const dayIndex = Number(elem.dataset.day);
-        const slotIndex = Number(elem.dataset.slot);
-        setCell(dayIndex, slotIndex);
-        paintBoard();
-      }
-
-      function handlePointerUp(event) {
-        if (!isPainting && swipeTracking && isMobileLayout() && event.pointerType === "touch") {
-          const deltaX = event.clientX - swipeStartX;
-          const deltaY = event.clientY - swipeStartY;
-          if (!swipeDidChangeDay && Math.abs(deltaX) > 52 && Math.abs(deltaX) > Math.abs(deltaY) + 12) {
-            shiftMobileDay(deltaX < 0 ? 1 : -1);
-            swipeDidChangeDay = true;
-          }
-        }
-
-        if (!isPainting && pendingTouchPaint && !swipeDidChangeDay) {
-          paintMode = pendingTouchPaint.paintMode;
-          setCell(pendingTouchPaint.dayIndex, pendingTouchPaint.slotIndex);
-          paintBoard();
-          clearResults("Verfügbarkeit geändert. Für neue Vorschläge bitte berechnen.");
-          saveState();
-          pendingTouchPaint = null;
-        }
-
-        if (isPainting) {
-          saveState();
-        }
-        isPainting = false;
-        swipeTracking = false;
-        swipeDidChangeDay = false;
-        pendingTouchPaint = null;
+        activePersonStatus.textContent = active ? `Aktiv: ${active.label}` : "Aktiv: -";
+        renderAvailabilityFormForActive();
       }
 
       function clearResults(message) {
@@ -1209,7 +1092,6 @@
         const active = getActive();
         if (!active) return;
         active.slots.clear();
-        paintBoard();
         clearResults("Markierungen der aktiven Person wurden entfernt.");
         saveState();
       }
@@ -1251,7 +1133,6 @@
         participants.length = 0;
         activeId = null;
         renderParticipantSelect();
-        paintBoard();
         clearResults("Plan wurde in der Cloud gelöscht.");
         showHome();
       }
@@ -1331,10 +1212,6 @@
         activeId = null;
         renderParticipantSelect();
 
-        if (!boardBuilt) {
-          // buildBoard(); // entfernt, da nicht mehr benötigt
-        }
-
         if (mode === "create") {
           setSyncStatus("erstelle Plan...");
           const created = await createPlanRemote(requestedAccessCode, requestedDeleteCode);
@@ -1369,8 +1246,6 @@
         }
 
         renderParticipantSelect();
-        paintBoard();
-        applyMobileDayFilter();
         clearResults(
           restoredCloud || restoredLocal
             ? "Plan geladen. Bitte zuerst 'Nächste anonyme Person' klicken."
@@ -1387,34 +1262,13 @@
         pollTimer = setInterval(pollCloudState, pollIntervalMs);
       }
 
-      participantSelect.addEventListener("change", (event) => {
-        if (!event.target.value) {
-          activeId = null;
-          renderParticipantSelect();
-          paintBoard();
-          return;
-        }
-        activeId = event.target.value;
-        renderParticipantSelect();
-        paintBoard();
-        saveState();
-      });
-
-      mobileParticipantSelect.addEventListener("change", (event) => {
-        if (!event.target.value) {
-          activeId = null;
-          renderParticipantSelect();
-          paintBoard();
-          return;
-        }
-        activeId = event.target.value;
-        renderParticipantSelect();
-        paintBoard();
-        saveState();
-      });
-
-      document.getElementById("add-participant").addEventListener("click", addParticipant);
+      addParticipantBtn.addEventListener("click", addParticipant);
       mobileAddParticipantBtn.addEventListener("click", addParticipant);
+      mobileParticipantSelect.addEventListener("change", (event) => {
+        activeId = event.target.value || null;
+        renderParticipantSelect();
+        saveState();
+      });
       document.getElementById("copy-link").addEventListener("click", copyPlanLink);
       mobileCopyLinkBtn.addEventListener("click", () => {
         copyPlanLink();
@@ -1438,10 +1292,6 @@
 
 
 
-
-      window.addEventListener("resize", () => {
-        applyMobileDayFilter();
-      });
 
       createPlanBtn.addEventListener("click", async () => {
         const access = createAccessPasswordInput.value.trim();
