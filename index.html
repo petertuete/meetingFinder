@@ -719,6 +719,9 @@
           saveState();
           setSyncStatus("Zeitfenster übernommen und gespeichert.");
           showConfirmationCheckmark();
+          
+          // Automatisch mit default Dauer (60 min) und Top 5 berechnen
+          setTimeout(() => calculate(), 500);
         });
       });
 
