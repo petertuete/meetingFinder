@@ -38,3 +38,7 @@ Ein kleines, lokales Tool zur Ermittlung der besten Meeting-Zeit auf Basis einer
 ### Mobile-Optimierung
 
 Die Eingabe der Verfügbarkeit ist jetzt immer einzeilig, übersichtlich und besonders für Mobilgeräte optimiert. Jede Tageszeile enthält Checkbox und Zeitfenster nebeneinander.
+
+## Urheberrecht
+
+Copyright (c) 2026 Jens Niedrich
